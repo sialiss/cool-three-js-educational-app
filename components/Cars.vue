@@ -30,6 +30,7 @@ export default {
 		const loader = new GLTFLoader();
 		loader.load(
 			"models/Car3.glb?url",
+            // "~/assets/models/Car 03/Car3.glb?url",
 			(gltf) => {
 				const car = gltf.scene;
 				car.scale.set(0.5, 0.5, 0.5);
