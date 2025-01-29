@@ -19,15 +19,21 @@
 
 	const init = () => {
 		scene = new THREE.Scene()
-		camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+
+		// Проверяем, что threeCanvas уже доступен
+		if (!threeCanvas.value) return
+
+		camera = new THREE.PerspectiveCamera(75, threeCanvas.value.offsetWidth / threeCanvas.value.offsetHeight, 0.1, 1000)
+
 		renderer = new THREE.WebGLRenderer({ antialias: true })
-		renderer.setSize(window.innerWidth, window.innerHeight)
+		renderer.setSize(threeCanvas.value.offsetWidth, threeCanvas.value.offsetHeight)
+		threeCanvas.value.appendChild(renderer.domElement)
+
 		controls = new OrbitControls(camera, renderer.domElement)
 		controls.enableDamping = true
 		controls.dampingFactor = 0.05
 		controls.minDistance = 2
 		controls.maxDistance = 15
-		if (threeCanvas.value) threeCanvas.value.appendChild(renderer.domElement)
 
 		const light = new THREE.AmbientLight(0xffffff, 0.5)
 		scene.add(light)
@@ -64,19 +70,40 @@
 		requestAnimationFrame(animate)
 		const speed = 0.1
 		const rotationSpeed = 0.03
+		const maxSteerAngle = Math.PI / 6 // Максимальный угол поворота передних колёс (30°)
+		const steerReturnSpeed = 0.05 // Скорость возвращения колёс в центр
 
-		if (keys.w || keys.ц) car.position.z += speed
-		if (keys.s || keys.ы) car.position.z -= speed
-		if (keys.a || keys.ф) car.rotation.y += rotationSpeed
-		if (keys.d || keys.в) car.rotation.y -= rotationSpeed
+		const direction = new THREE.Vector3()
+		car.getWorldDirection(direction)
 
-		// Object.values(wheels).forEach(wheel => {
-		// 	wheel.rotation.x -= 0.1 * (keys.w ? 1 : keys.s ? -1 : 0)
-		// })
+		if (keys.w || keys.ц) {
+			car.position.addScaledVector(direction, speed)
+		}
+		if (keys.s || keys.ы) {
+			car.position.addScaledVector(direction, -speed)
+		}
+		if (keys.a || keys.ф) {
+			car.rotation.y += rotationSpeed
+		}
+		if (keys.d || keys.в) {
+			car.rotation.y -= rotationSpeed
+		}
+
+		// Вращение колёс (вперёд-назад)
+		const rollingDirection = keys.w || keys.ц ? 1 : keys.s || keys.ы ? -1 : 0
 		Object.values(wheels).forEach(wheel => {
-			wheel.rotateX(-0.1 * (keys.w ? 1 : keys.s ? -1 : 0))
+			wheel.rotateX(-0.1 * rollingDirection)
 		})
 
+		// Поворот передних колёс влево/вправо с плавным возвращением в центр
+		let targetSteerAngle = 0
+		if (keys.a || keys.ф) targetSteerAngle = maxSteerAngle
+		if (keys.d || keys.в) targetSteerAngle = -maxSteerAngle
+
+		wheels.Wheel1.rotation.y += (targetSteerAngle - wheels.Wheel1.rotation.y) * steerReturnSpeed
+		wheels.Wheel2.rotation.y += (targetSteerAngle - wheels.Wheel2.rotation.y) * steerReturnSpeed
+
+		// Центрируем камеру на машине
 		controls.target.set(car.position.x, car.position.y, car.position.z)
 		controls.update()
 		renderer.render(scene, camera)
