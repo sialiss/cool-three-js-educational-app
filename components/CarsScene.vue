@@ -8,13 +8,14 @@
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 	import * as CANNON from "cannon-es"
 
-	// Переменные сцены
 	let scene: THREE.Scene
 	let camera: THREE.PerspectiveCamera
 	let renderer: THREE.WebGLRenderer
 	let world: CANNON.World
 	let car: THREE.Object3D
 	let carBody: CANNON.Body
+	let vehicle: CANNON.RaycastVehicle
+	let wheelMeshes: THREE.Object3D[] = []
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, a: false, s: false, d: false }
 
@@ -24,11 +25,8 @@
 		camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 		renderer = new THREE.WebGLRenderer({ antialias: true })
 		renderer.setSize(window.innerWidth, window.innerHeight)
-		if (threeCanvas.value) {
-			threeCanvas.value.appendChild(renderer.domElement)
-		}
+		if (threeCanvas.value) threeCanvas.value.appendChild(renderer.domElement)
 
-		// Свет
 		const light = new THREE.DirectionalLight(0xffffff, 1)
 		light.position.set(5, 5, 5)
 		scene.add(light)
@@ -37,106 +35,103 @@
 		world = new CANNON.World()
 		world.gravity.set(0, -9.82, 0)
 
-		// Плоскость (дорога)
 		const groundMaterial = new CANNON.Material("groundMaterial")
 		const groundBody = new CANNON.Body({
-			mass: 0, // Нерушимая
+			mass: 0,
 			shape: new CANNON.Plane(),
 			material: groundMaterial,
 		})
 		groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
 		world.addBody(groundBody)
 
-		const planeGeometry = new THREE.PlaneGeometry(20, 20)
-		const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide })
-		const plane = new THREE.Mesh(planeGeometry, planeMaterial)
+		const plane = new THREE.Mesh(
+			new THREE.PlaneGeometry(20, 20),
+			new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide })
+		)
 		plane.rotation.x = -Math.PI / 2
 		scene.add(plane)
 
 		// === Загрузка 3D-модели машины ===
 		const loader = new GLTFLoader()
-		loader.load(
-			"models/Car3.glb?url",
-			(gltf: { scene: THREE.Object3D<THREE.Object3DEventMap> }) => {
-				car = gltf.scene
-				car.scale.set(0.5, 0.5, 0.5)
-				scene.add(car)
+		loader.load("models/Car3.glb?url", gltf => {
+			car = gltf.scene
+			car.scale.set(0.5, 0.5, 0.5)
+			scene.add(car)
 
-				// === Создание физического тела для машины ===
-				const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1)) // Размер машины
-				carBody = new CANNON.Body({
-					mass: 1, // Должна двигаться
-					shape: shape,
-				})
-				carBody.position.set(0, 0.25, 0)
-				world.addBody(carBody)
+			const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1))
+			carBody = new CANNON.Body({ mass: 1, shape })
+			carBody.position.set(0, 0.5, 0)
+			world.addBody(carBody)
 
-				animate()
-			},
-			undefined,
-			(error: any) => console.error("Ошибка загрузки модели: ", error)
-		)
+			initWheels()
+			animate()
+		})
 
 		camera.position.set(0, 2, 5)
-		camera.lookAt(0, 0, 0)
+		camera.lookAt(new THREE.Vector3(0, 0, 0))
 	}
 
-	// Обработка нажатий клавиш
+	const initWheels = () => {
+		vehicle = new CANNON.RaycastVehicle({ chassisBody: carBody })
+
+		const wheelPositions = [
+			[0.6, -0.2, 0.8],
+			[-0.6, -0.2, 0.8],
+			[0.6, -0.2, -0.8],
+			[-0.6, -0.2, -0.8],
+		]
+
+		wheelPositions.forEach(pos => {
+			vehicle.addWheel({
+				chassisConnectionPointLocal: new CANNON.Vec3(...pos),
+				suspensionStiffness: 20,
+				suspensionRestLength: 0.3,
+				maxSuspensionForce: 100000,
+				radius: 0.2,
+				directionLocal: new CANNON.Vec3(0, -1, 0),
+				axleLocal: new CANNON.Vec3(1, 0, 0),
+			})
+		})
+
+		vehicle.addToWorld(world)
+	}
+
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key in keys) {
-			keys[event.key as keyof typeof keys] = true
-		}
+		if (keys[event.key as keyof typeof keys] !== undefined) keys[event.key as keyof typeof keys] = true
+        console.log('down')
 	}
 
 	const handleKeyUp = (event: KeyboardEvent) => {
-		if (event.key in keys) {
-			keys[event.key as keyof typeof keys] = false
-		}
+		if (keys[event.key as keyof typeof keys] !== undefined) keys[event.key as keyof typeof keys] = false
 	}
 
-	const onWindowResize = () => {
-		if (renderer && camera) {
-			const width = window.innerWidth
-			const height = window.innerHeight
-			renderer.setSize(width, height)
-			camera.aspect = width / height
-			camera.updateProjectionMatrix()
-		}
-	}
-
-	const focusWindow = () => {
-		window.focus()
-		document.body.focus()
-	}
-
-	// Анимация
 	const animate = () => {
 		requestAnimationFrame(animate)
+		world.step(1 / 60)
 
-		world.step(1 / 60) // Физика
+		if (keys.w) vehicle.applyEngineForce(5, 2), vehicle.applyEngineForce(5, 3)
+		if (keys.s) vehicle.applyEngineForce(-5, 2), vehicle.applyEngineForce(-5, 3)
+		if (keys.a) vehicle.setSteeringValue(0.5, 0), vehicle.setSteeringValue(0.5, 1)
+		if (keys.d) vehicle.setSteeringValue(-0.5, 0), vehicle.setSteeringValue(-0.5, 1)
 
-		let speed = 2
-		let rotationSpeed = 2
+		vehicle.wheelInfos.forEach((wheelInfo, index) => {
+			if (!wheelMeshes[index]) return
 
-		if (keys.w) {
-			carBody.velocity.z -= speed * Math.cos(carBody.quaternion.y)
-			carBody.velocity.x -= speed * Math.sin(carBody.quaternion.y)
-		}
-		if (keys.s) {
-			carBody.velocity.z += speed * Math.cos(carBody.quaternion.y)
-			carBody.velocity.x += speed * Math.sin(carBody.quaternion.y)
-		}
-		if (keys.a) carBody.angularVelocity.y += rotationSpeed
-		if (keys.d) carBody.angularVelocity.y -= rotationSpeed
+			vehicle.updateWheelTransform(index) // 🔥 ОБЯЗАТЕЛЬНО перед обновлением позиции!
 
-		// Обновление позиции Three.js по Cannon.js
-		if (car) {
-			car.position.copy(carBody.position as unknown as THREE.Vector3)
-			car.quaternion.copy(carBody.quaternion as unknown as THREE.Quaternion)
-		}
+			const wheelTransform = wheelInfo.worldTransform
+			wheelMeshes[index].position.copy(wheelTransform.position as unknown as THREE.Vector3)
+			wheelMeshes[index].quaternion.copy(wheelTransform.quaternion as unknown as THREE.Quaternion)
+			wheelMeshes[index].quaternion.multiply(
+				new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
+			)
+		})
 
 		camera.position.set(carBody.position.x, carBody.position.y + 2, carBody.position.z + 5)
 		camera.lookAt(new THREE.Vector3(carBody.position.x, carBody.position.y, carBody.position.z))
+
+		car.position.copy(carBody.position as unknown as THREE.Vector3)
+		car.quaternion.copy(carBody.quaternion as unknown as THREE.Quaternion)
 
 		renderer.render(scene, camera)
 	}
@@ -145,8 +140,6 @@
 		init()
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)
-		window.addEventListener("resize", onWindowResize)
-		threeCanvas.value?.addEventListener("click", focusWindow)
 	})
 </script>
 
