@@ -6,140 +6,115 @@
 	import { onMounted, ref } from "vue"
 	import * as THREE from "three"
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
-	import * as CANNON from "cannon-es"
+	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 
 	let scene: THREE.Scene
 	let camera: THREE.PerspectiveCamera
 	let renderer: THREE.WebGLRenderer
-	let world: CANNON.World
 	let car: THREE.Object3D
-	let carBody: CANNON.Body
-	let vehicle: CANNON.RaycastVehicle
-	let wheelMeshes: THREE.Object3D[] = []
+	let wheels: Record<string, THREE.Object3D> = {}
+	let controls: OrbitControls
 	const threeCanvas = ref<HTMLDivElement | null>(null)
-	const keys = { w: false, a: false, s: false, d: false }
+	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
 
 	const init = () => {
-		// === Инициализация THREE.js ===
 		scene = new THREE.Scene()
 		camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 		renderer = new THREE.WebGLRenderer({ antialias: true })
 		renderer.setSize(window.innerWidth, window.innerHeight)
+		controls = new OrbitControls(camera, renderer.domElement)
+		controls.enableDamping = true
+		controls.dampingFactor = 0.05
+		controls.minDistance = 2
+		controls.maxDistance = 15
 		if (threeCanvas.value) threeCanvas.value.appendChild(renderer.domElement)
 
-		const light = new THREE.DirectionalLight(0xffffff, 1)
-		light.position.set(5, 5, 5)
+		const light = new THREE.AmbientLight(0xffffff, 0.5)
 		scene.add(light)
-
-		// === Инициализация Cannon.js ===
-		world = new CANNON.World()
-		world.gravity.set(0, -9.82, 0)
-
-		const groundMaterial = new CANNON.Material("groundMaterial")
-		const groundBody = new CANNON.Body({
-			mass: 0,
-			shape: new CANNON.Plane(),
-			material: groundMaterial,
-		})
-		groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
-		world.addBody(groundBody)
+		const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+		directionalLight.position.set(5, 5, 5)
+		scene.add(directionalLight)
 
 		const plane = new THREE.Mesh(
 			new THREE.PlaneGeometry(20, 20),
-			new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide })
+			new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide })
 		)
 		plane.rotation.x = -Math.PI / 2
 		scene.add(plane)
 
-		// === Загрузка 3D-модели машины ===
 		const loader = new GLTFLoader()
 		loader.load("models/Car3.glb?url", gltf => {
 			car = gltf.scene
 			car.scale.set(0.5, 0.5, 0.5)
+			car.position.set(0, 0.5, 0)
 			scene.add(car)
 
-			const shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1))
-			carBody = new CANNON.Body({ mass: 1, shape })
-			carBody.position.set(0, 0.5, 0)
-			world.addBody(carBody)
+			wheels.Wheel1 = car.getObjectByName("Wheel1")!
+			wheels.Wheel2 = car.getObjectByName("Wheel2")!
+			wheels.Wheel3 = car.getObjectByName("Wheel3")!
+			wheels.Wheel4 = car.getObjectByName("Wheel4")!
 
-			initWheels()
 			animate()
 		})
 
-		camera.position.set(0, 2, 5)
-		camera.lookAt(new THREE.Vector3(0, 0, 0))
-	}
-
-	const initWheels = () => {
-		vehicle = new CANNON.RaycastVehicle({ chassisBody: carBody })
-
-		const wheelPositions = [
-			[0.6, -0.2, 0.8],
-			[-0.6, -0.2, 0.8],
-			[0.6, -0.2, -0.8],
-			[-0.6, -0.2, -0.8],
-		]
-
-		wheelPositions.forEach(pos => {
-			vehicle.addWheel({
-				chassisConnectionPointLocal: new CANNON.Vec3(...pos),
-				suspensionStiffness: 20,
-				suspensionRestLength: 0.3,
-				maxSuspensionForce: 100000,
-				radius: 0.2,
-				directionLocal: new CANNON.Vec3(0, -1, 0),
-				axleLocal: new CANNON.Vec3(1, 0, 0),
-			})
-		})
-
-		vehicle.addToWorld(world)
-	}
-
-	const handleKeyDown = (event: KeyboardEvent) => {
-		if (keys[event.key as keyof typeof keys] !== undefined) keys[event.key as keyof typeof keys] = true
-        console.log('down')
-	}
-
-	const handleKeyUp = (event: KeyboardEvent) => {
-		if (keys[event.key as keyof typeof keys] !== undefined) keys[event.key as keyof typeof keys] = false
+		camera.position.set(0, 5, 10)
 	}
 
 	const animate = () => {
 		requestAnimationFrame(animate)
-		world.step(1 / 60)
+		const speed = 0.1
+		const rotationSpeed = 0.03
 
-		if (keys.w) vehicle.applyEngineForce(5, 2), vehicle.applyEngineForce(5, 3)
-		if (keys.s) vehicle.applyEngineForce(-5, 2), vehicle.applyEngineForce(-5, 3)
-		if (keys.a) vehicle.setSteeringValue(0.5, 0), vehicle.setSteeringValue(0.5, 1)
-		if (keys.d) vehicle.setSteeringValue(-0.5, 0), vehicle.setSteeringValue(-0.5, 1)
+		if (keys.w || keys.ц) car.position.z += speed
+		if (keys.s || keys.ы) car.position.z -= speed
+		if (keys.a || keys.ф) car.rotation.y += rotationSpeed
+		if (keys.d || keys.в) car.rotation.y -= rotationSpeed
 
-		vehicle.wheelInfos.forEach((wheelInfo, index) => {
-			if (!wheelMeshes[index]) return
-
-			vehicle.updateWheelTransform(index) // 🔥 ОБЯЗАТЕЛЬНО перед обновлением позиции!
-
-			const wheelTransform = wheelInfo.worldTransform
-			wheelMeshes[index].position.copy(wheelTransform.position as unknown as THREE.Vector3)
-			wheelMeshes[index].quaternion.copy(wheelTransform.quaternion as unknown as THREE.Quaternion)
-			wheelMeshes[index].quaternion.multiply(
-				new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
-			)
+		// Object.values(wheels).forEach(wheel => {
+		// 	wheel.rotation.x -= 0.1 * (keys.w ? 1 : keys.s ? -1 : 0)
+		// })
+		Object.values(wheels).forEach(wheel => {
+			wheel.rotateX(-0.1 * (keys.w ? 1 : keys.s ? -1 : 0))
 		})
 
-		camera.position.set(carBody.position.x, carBody.position.y + 2, carBody.position.z + 5)
-		camera.lookAt(new THREE.Vector3(carBody.position.x, carBody.position.y, carBody.position.z))
-
-		car.position.copy(carBody.position as unknown as THREE.Vector3)
-		car.quaternion.copy(carBody.quaternion as unknown as THREE.Quaternion)
-
+		controls.target.set(car.position.x, car.position.y, car.position.z)
+		controls.update()
 		renderer.render(scene, camera)
+	}
+
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key in keys) {
+			keys[event.key as keyof typeof keys] = true
+		}
+	}
+
+	const handleKeyUp = (event: KeyboardEvent) => {
+		if (event.key in keys) {
+			keys[event.key as keyof typeof keys] = false
+		}
+	}
+
+	const onWindowResize = () => {
+		if (renderer && camera) {
+			const width = window.innerWidth
+			const height = window.innerHeight
+			renderer.setSize(width, height)
+			camera.aspect = width / height
+			camera.updateProjectionMatrix()
+		}
+	}
+
+	const focusWindow = () => {
+		window.focus()
+		document.body.focus()
 	}
 
 	onMounted(() => {
 		init()
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)
+		window.addEventListener("resize", onWindowResize)
+		threeCanvas.value?.addEventListener("click", focusWindow)
 	})
 </script>
 
