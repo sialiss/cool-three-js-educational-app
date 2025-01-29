@@ -1,15 +1,15 @@
 <template>
 	<div>
-		<Cars />
+		<CarsScene />
 	</div>
 </template>
 
 <script>
-	import Cars from "@/components/Cars.vue"
+	import CarsScene from "~/components/CarsScene.vue"
 
 	export default {
 		components: {
-			Cars,
+			CarsScene,
 		},
 	}
 </script>

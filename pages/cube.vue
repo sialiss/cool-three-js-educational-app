@@ -1,17 +1,17 @@
 <template>
-  <div>
-    <ThreeScene />
-  </div>
+	<div>
+		<ThreeScene />
+	</div>
 </template>
 
 <script>
-import ThreeScene from "@/components/ThreeScene.vue";
+	import ThreeScene from "@/components/ThreeScene.vue"
 
-export default {
-  components: {
-    ThreeScene,
-  },
-};
+	export default {
+		components: {
+			ThreeScene,
+		},
+	}
 </script>
 
 <style>
