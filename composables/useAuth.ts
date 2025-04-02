@@ -1,27 +1,17 @@
-import { useState } from "#app"
-import { onMounted } from "vue"
+import { useState, useCookie } from "#app"
 
 export const useAuth = () => {
-	const isAuthenticated = useState("auth", () => false)
-
-	onMounted(() => {
-		if (import.meta.client) {
-			isAuthenticated.value = Boolean(localStorage.getItem("auth"))
-		}
-	})
+	const authCookie = useCookie("auth")
+	const isAuthenticated = useState("auth", () => Boolean(authCookie.value))
 
 	const login = () => {
 		isAuthenticated.value = true
-		if (import.meta.client) {
-			localStorage.setItem("auth", "true")
-		}
+		authCookie.value = "true"
 	}
 
 	const logout = () => {
 		isAuthenticated.value = false
-		if (import.meta.client) {
-			localStorage.removeItem("auth")
-		}
+		authCookie.value = null
 	}
 
 	return { isAuthenticated, login, logout }
