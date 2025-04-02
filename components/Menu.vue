@@ -1,18 +1,29 @@
+<script setup>
+	import { useAuth } from "@/composables/useAuth" // Файл кастомного хука
+
+	const { isAuthenticated } = useAuth()
+    console.log(isAuthenticated)
+</script>
+
 <template>
 	<div class="minimenu">
 		<div class="account">
-			<NuxtLink to="/login" exact-active-class="active">Войти</NuxtLink>
+			<NuxtLink v-if="!isAuthenticated" to="/login" exact-active-class="active">Войти</NuxtLink>
+            <NuxtLink v-if="isAuthenticated" to="/logout" exact-active-class="active">Выйти</NuxtLink>
 		</div>
 		<nav class="navbar">
 			<ul>
 				<li>
 					<NuxtLink to="/" exact-active-class="active">Главная</NuxtLink>
 				</li>
-				<!-- <li><NuxtLink to="/about" exact-active-class="active">О нас</NuxtLink></li> -->
-				<li>
-					<NuxtLink to="/cube" exact-active-class="active">Куб</NuxtLink>
+				<li v-if="!isAuthenticated"><NuxtLink to="/about" exact-active-class="active">О нас</NuxtLink></li>
+				<li v-if="isAuthenticated">
+					<NuxtLink to="/dashboard" exact-active-class="active">Главная панель</NuxtLink>
 				</li>
-				<li>
+				<!-- <li>
+					<NuxtLink to="/cube" exact-active-class="active">Куб</NuxtLink>
+				</li> -->
+				<li v-if="isAuthenticated">
 					<NuxtLink to="/cars" exact-active-class="active">Машинки</NuxtLink>
 				</li>
 			</ul>

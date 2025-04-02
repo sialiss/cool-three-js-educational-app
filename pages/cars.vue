@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="cars">
 		<CarsScene />
 	</div>
 </template>
@@ -15,7 +15,7 @@
 </script>
 
 <style>
-	div {
+	.cars {
 		height: 100%;
 	}
 </style>
