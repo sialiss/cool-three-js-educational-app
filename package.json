@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/three": "^0.172.0",
     "cannon-es": "^0.20.0",
+    "marked": "^15.0.7",
     "nuxt": "^3.15.3",
     "three": "^0.172.0",
     "vue": "latest",
