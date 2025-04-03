@@ -18,7 +18,7 @@
 				</li>
 				<li v-if="!isAuthenticated"><NuxtLink to="/about" exact-active-class="active">О нас</NuxtLink></li>
 				<li v-if="isAuthenticated">
-					<NuxtLink to="/dashboard" exact-active-class="active">Главная панель</NuxtLink>
+					<NuxtLink to="/dashboard" exact-active-class="active">Панель обучения</NuxtLink>
 				</li>
 				<!-- <li>
 					<NuxtLink to="/cube" exact-active-class="active">Куб</NuxtLink>
