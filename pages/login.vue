@@ -5,8 +5,8 @@
 
 			<form @submit.prevent="handleLogin" class="form">
 				<div class="input-group">
-					<label for="email">Email</label>
-					<input id="email" v-model="email" type="email" required />
+					<label for="login">Логин</label>
+					<input id="login" v-model="email" type="login" required />
 				</div>
 
 				<div class="input-group">
@@ -37,23 +37,25 @@
 <script setup lang="ts">
 	import { ref } from "vue"
 	import { useRouter } from "vue-router"
-	import { useAuth } from "@/composables/useAuth" // Подключаем useAuth
+	import { useAuth } from "@/composables/useAuth"
 
 	const email = ref("")
 	const password = ref("")
 	const loading = ref(false)
 	const router = useRouter()
-	const { login } = useAuth() // Берем функцию login из useAuth
+	const { login } = useAuth()
 
 	const handleLogin = async () => {
 		loading.value = true
 
-		// Имитация запроса на сервер
-		setTimeout(() => {
-			loading.value = false
-			login() // Запоминаем, что пользователь залогинился
+		try {
+			await login(email.value, password.value)
 			router.push("/dashboard")
-		}, 2000)
+		} catch (err) {
+			console.error("Ошибка входа: ", err)
+		} finally {
+			loading.value = false
+		}
 	}
 </script>
 
