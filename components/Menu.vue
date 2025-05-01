@@ -2,14 +2,14 @@
 	import { useAuth } from "@/composables/useAuth" // Файл кастомного хука
 
 	const { isAuthenticated } = useAuth()
-    console.log(isAuthenticated)
+	console.log("вход: ", isAuthenticated.value)
 </script>
 
 <template>
 	<div class="minimenu">
 		<div class="account">
 			<NuxtLink v-if="!isAuthenticated" to="/login" exact-active-class="active">Войти</NuxtLink>
-            <NuxtLink v-if="isAuthenticated" to="/logout" exact-active-class="active">Выйти</NuxtLink>
+			<NuxtLink v-if="isAuthenticated" to="/logout" exact-active-class="active">Выйти</NuxtLink>
 		</div>
 		<nav class="navbar">
 			<ul>

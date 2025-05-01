@@ -6,7 +6,7 @@
 			<form @submit.prevent="handleLogin" class="form">
 				<div class="input-group">
 					<label for="login">Логин</label>
-					<input id="login" v-model="email" type="login" required />
+					<input id="login" v-model="login_input" type="text" required autocomplete="username">
 				</div>
 
 				<div class="input-group">
@@ -39,7 +39,7 @@
 	import { useRouter } from "vue-router"
 	import { useAuth } from "@/composables/useAuth"
 
-	const email = ref("")
+	const login_input = ref("")
 	const password = ref("")
 	const loading = ref(false)
 	const router = useRouter()
@@ -49,7 +49,7 @@
 		loading.value = true
 
 		try {
-			await login(email.value, password.value)
+			await login(login_input.value, password.value)
 			router.push("/dashboard")
 		} catch (err) {
 			console.error("Ошибка входа: ", err)
