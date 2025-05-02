@@ -3,11 +3,11 @@
 		<template v-if="lesson && !editing">
 			<h1>{{ lesson.title }}</h1>
 			<div class="lesson-text" v-html="formattedLesson"></div>
-			<div class="buttons" :style="gridStyle">
-				<button v-if="prevLesson" @click="goBack">Назад</button>
+			<div class="buttons">
+				<button v-if="prevLesson" @click="goToPrevLesson">Назад</button>
 				<button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button>
 				<button @click="goList">К списку</button>
-				<button
+				<button v-if="getRole() == 'user'"
 					:style="{ backgroundColor: lesson.completed ? 'darkgreen' : '' }"
 					@click="toggleCompletion(lesson.id)"
 				>
@@ -125,16 +125,6 @@
 		return lessons[currentLessonIndex + 1] || null
 	})
 
-	const gridStyle = computed(() => {
-		if (nextLesson.value && prevLesson.value) {
-			return { "grid-template-columns": "repeat(5, 1fr)" }
-		} else if (prevLesson.value) {
-			return { "grid-template-columns": "repeat(4, 1fr)" }
-		} else if (nextLesson.value) {
-			return { "grid-template-columns": "repeat(4, 1fr)" }
-		}
-	})
-
 	const goToPrevLesson = () => {
 		if (prevLesson.value) {
 			// Переход на следующий урок
@@ -237,14 +227,14 @@
 		gap: 0rem;
 	}
 	.buttons {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		display: flex;
+		justify-content: center;
 		margin: auto 15% auto 15%;
 		gap: 3rem;
 	}
 	button {
 		margin-top: 1rem;
-		padding: 10px;
+		padding: 12px;
 		background: #007bff;
 		color: white;
 		border: none;
