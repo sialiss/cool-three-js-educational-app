@@ -7,7 +7,8 @@
 				<button v-if="prevLesson" @click="goToPrevLesson">Назад</button>
 				<button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button>
 				<button @click="goList">К списку</button>
-				<button v-if="getRole() == 'user'"
+				<button
+					v-if="getRole() == 'user'"
 					:style="{ backgroundColor: lesson.completed ? 'darkgreen' : '' }"
 					@click="toggleCompletion(lesson.id)"
 				>
@@ -142,7 +143,7 @@
 
 	const toggleCompletion = async id => {
 		try {
-            const res = toggleComplete(id)
+			const res = toggleComplete(id)
 
 			// Обновляем локальное состояние
 			if (lesson.value) {
@@ -162,13 +163,25 @@
 
 	const saveChanges = async () => {
 		try {
-			// Здесь можно сделать PATCH или PUT на сервер
-			await fetch(`/lessons/${lesson.value.id}`, {
+			// Отправляем PUT запрос на сервер для обновления данных урока
+			const res = await fetch(`http://localhost:8000/theory-lessons/${lesson.value.id}`, {
 				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(lesson.value),
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					title: lesson.value.title,
+					description: lesson.value.description,
+					content: lessonContent.value,
+				}),
 			})
-			editing.value = false
+
+			if (!res.ok) throw new Error("Не удалось сохранить изменения")
+
+			const updatedLesson = await res.json()
+			lesson.value = updatedLesson.lesson // Обновляем локальные данные
+
+			editing.value = false // Выходим из режима редактирования
 		} catch (err) {
 			console.error("Ошибка при сохранении:", err)
 		}
@@ -177,10 +190,17 @@
 	const deleteLesson = async () => {
 		if (confirm("Удалить урок?")) {
 			try {
-				await fetch(`/lessons/${lesson.value.id}`, {
+				// Отправляем DELETE запрос на сервер для удаления урока
+				const res = await fetch(`http://localhost:8000/theory-lessons/${lesson.value.id}`, {
 					method: "DELETE",
 				})
-				goList()
+
+				if (res.ok) {
+					// После успешного удаления переходим к списку уроков
+					goList()
+				} else {
+					throw new Error("Ошибка при удалении")
+				}
 			} catch (err) {
 				console.error("Ошибка при удалении:", err)
 			}
