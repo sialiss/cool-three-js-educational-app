@@ -20,7 +20,7 @@
 	import { useRouter } from "vue-router"
 	import { defineProps, inject } from "vue"
 	import { useAuth } from "@/composables/useAuth"
-	const { getRole } = useAuth()
+	const { getRole, toggleComplete } = useAuth()
 
 	const router = useRouter()
 	const props = defineProps({ lesson: Object })
@@ -38,35 +38,20 @@
 
 	const toggleCompletion = async id => {
 		try {
-			const response = await fetch("/lessons/theory.json")
-			let lessonsData = await response.json()
+			const res = toggleComplete(id)
 
-			// Найти нужный урок
-			const lessonIndex = lessonsData.findIndex(lesson => lesson.id === id)
-			if (lessonIndex !== -1) {
-				// Инвертируем состояние (отмечаем/снимаем "Пройдено")
-				lessonsData[lessonIndex].completed = !lessonsData[lessonIndex].completed
+			// 💡 Обновляем локальные данные (моментальное изменение UI)
+			const localLesson = lessons.value.find(lesson => lesson.id === id)
+			if (localLesson) {
+				localLesson.completed = !localLesson.completed
+			}
 
-				// Обновляем JSON на сервере
-				await fetch("/lessons/theory.json", {
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(lessonsData),
-				})
-
-				// 💡 Обновляем локальные данные (моментальное изменение UI)
-				const localLesson = lessons.value.find(lesson => lesson.id === id)
-				if (localLesson) {
-					localLesson.completed = !localLesson.completed
-				}
-
-				// 💡 Если сняли отметку, выбираем первый непройденный урок
-				if (!localLesson.completed) {
-					selectedLesson.value = lessons.value.find(l => !l.completed) || selectedLesson.value
-				}
+			// 💡 Если поставили отметку, выбираем первый непройденный урок
+			if (localLesson.completed) {
+				selectedLesson.value = lessons.value.find(l => !l.completed) || selectedLesson.value
 			}
 		} catch (error) {
-			console.error("Ошибка при обновлении урока:", error)
+			console.error("Ошибка при обновлении статуса урока:", error)
 		}
 	}
 </script>

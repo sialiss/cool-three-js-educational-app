@@ -31,17 +31,37 @@
 	import { ref, computed, onMounted, provide } from "vue"
 	import LessonDescription from "~/components/LessonDescription.vue"
 	import { useAuth } from "@/composables/useAuth"
-	const { getRole } = useAuth()
+	const { getRole, getMe } = useAuth()
 
 	const lessons = ref([])
 	const selectedLesson = ref(null)
 
 	onMounted(async () => {
-		const res = await fetch("/lessons/theory.json")
-		lessons.value = await res.json()
+		try {
+			// 1. Получаем все уроки
+			const resLessons = await fetch("http://localhost:8000/theory-lessons/", {
+				headers: { "Content-Type": "application/json" },
+			})
+			if (!resLessons.ok) throw new Error("Не удалось загрузить уроки")
+			const allLessons = await resLessons.json()
 
-		// Выбираем первый НЕ пройденный урок
-		selectedLesson.value = lessons.value.find(lesson => !lesson.completed) || lessons.value[0]
+			// 2. Получаем данные пользователя (включая completedTheoryLessons)
+			const resUser = await getMe()
+			if (!resUser.ok) throw new Error("Не удалось загрузить пользователя")
+
+			// 3. Отмечаем уроки как завершённые
+			const completedIds = new Set(resUser.user.completedTheoryLessons.map(l => l.id))
+			allLessons.forEach(lesson => {
+				lesson.completed = completedIds.has(lesson.id)
+			})
+
+			lessons.value = allLessons
+
+			// 4. Выбираем первый непройденный
+			selectedLesson.value = lessons.value.find(lesson => !lesson.completed) || lessons.value[0]
+		} catch (err) {
+			console.error("Ошибка загрузки данных:", err)
+		}
 	})
 
 	provide("lessons", lessons)

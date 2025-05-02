@@ -40,13 +40,13 @@
 					<button @click="wrapBB('[img]', '[/img]')">Изображение</button>
 				</div>
 
-				<textarea class="edit-textarea" v-model="lessonContent" ref="textarea"></textarea>
+				<textarea class="edit-textarea content" v-model="lessonContent" ref="textarea"></textarea>
 
 				<h3>Предпросмотр:</h3>
 				<div class="lesson-preview" v-html="renderedContent"></div>
 			</div>
 
-			<div class="buttons">
+			<div class="admin-actions">
 				<button @click="saveChanges">💾 Сохранить</button>
 				<button @click="cancelEditing">❌ Отмена</button>
 			</div>
@@ -59,27 +59,40 @@
 <script setup>
 	import { ref, onMounted, computed } from "vue"
 	import { useRoute, useRouter } from "vue-router"
-	import { marked } from "marked"
 	import { useAuth } from "@/composables/useAuth"
+	import bbcode from "bbcode"
 
-	const { getRole } = useAuth()
+	const { getRole, getToken, toggleComplete } = useAuth()
 
 	const route = useRoute()
 	const router = useRouter()
 	let lessons = ref(null)
-	const lesson = ref(null)
+	let lesson = ref(null)
 
 	onMounted(async () => {
-		const res = await fetch("/lessons/theory.json")
-		lessons = await res.json()
+		try {
+			const res = await fetch(`http://localhost:8000/theory-lessons/`, {
+				headers: {
+					"Content-Type": "application/json",
+				},
+			})
 
-		// Получаем id из URL и ищем нужный урок
-		lesson.value = lessons.find(l => l.id === Number(route.params.id))
+			if (!res.ok) throw new Error("Не удалось загрузить уроки")
+
+			lessons = await res.json()
+			lesson.value = lessons.find(l => l.id === Number(route.params.id))
+			console.log(lesson)
+			if (lesson.value?.content) {
+				lessonContent.value = lesson.value.content
+			}
+		} catch (err) {
+			console.error("Ошибка загрузки уроков:", err)
+		}
 	})
 
 	const formattedLesson = computed(() => {
 		if (lesson.value) {
-			return marked(lesson.value.lesson)
+			return bbcode.parse(lesson.value.content)
 		}
 		return ""
 	})
@@ -139,30 +152,14 @@
 
 	const toggleCompletion = async id => {
 		try {
-			const response = await fetch("/lessons/theory.json")
-			let lessonsData = await response.json()
+            const res = toggleComplete(id)
 
-			// Найти нужный урок
-			const lessonIndex = lessonsData.findIndex(lesson => lesson.id === id)
-			if (lessonIndex !== -1) {
-				// Инвертируем состояние (отмечаем/снимаем "Пройдено")
-				lessonsData[lessonIndex].completed = !lessonsData[lessonIndex].completed
-
-				// Обновляем JSON на сервере
-				await fetch("/lessons/theory.json", {
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(lessonsData),
-				})
-
-				// Обновляем локальные данные (моментальное изменение UI)
-				const localLesson = lesson.value
-				if (localLesson) {
-					localLesson.completed = !localLesson.completed
-				}
+			// Обновляем локальное состояние
+			if (lesson.value) {
+				lesson.value.completed = res
 			}
 		} catch (error) {
-			console.error("Ошибка при обновлении урока:", error)
+			console.error("Ошибка при обновлении статуса урока:", error)
 		}
 	}
 
@@ -203,17 +200,7 @@
 	const lessonContent = ref("")
 
 	const renderedContent = computed(() => {
-		return lessonContent.value
-			.replace(/\[b\](.*?)\[\/b\]/g, "<strong>$1</strong>")
-			.replace(/\[i\](.*?)\[\/i\]/g, "<em>$1</em>")
-			.replace(/\[u\](.*?)\[\/u\]/g, "<u>$1</u>")
-			.replace(/\[url\](.*?)\[\/url\]/g, '<a href="$1" target="_blank">$1</a>')
-			.replace(/\[code\](.*?)\[\/code\]/gs, "<pre><code>$1</code></pre>")
-			.replace(/\[quote\](.*?)\[\/quote\]/gs, "<blockquote>$1</blockquote>")
-			.replace(/\[color=(.*?)\](.*?)\[\/color\]/gs, '<span style="color:$1;">$2</span>')
-			.replace(/\[size=(\d+)\](.*?)\[\/size\]/gs, '<span style="font-size:$1px;">$2</span>')
-			.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" alt="image" />')
-			.replace(/\n/g, "<br>")
+		return bbcode.parse(lessonContent.value)
 	})
 
 	const textarea = ref(null)
@@ -295,7 +282,10 @@
 		font-size: 1rem;
 		border: 1px solid #ccc;
 		border-radius: 5px;
-		resize: none;
+		resize: vertical;
+	}
+	.edit-textarea.content {
+		height: 15rem;
 	}
 	.bb-toolbar {
 		display: flex;
