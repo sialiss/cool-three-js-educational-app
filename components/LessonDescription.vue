@@ -6,6 +6,7 @@
 			<button @click="goToLesson(lesson.id)" class="primary">Открыть теорию</button>
 			<button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button>
 			<button
+				v-if="getRole() == 'user'"
 				@click="toggleCompletion(lesson.id)"
 				:class="lesson.completed ? 'completed completed-active' : 'completed'"
 			>
@@ -18,6 +19,8 @@
 <script setup>
 	import { useRouter } from "vue-router"
 	import { defineProps, inject } from "vue"
+	import { useAuth } from "@/composables/useAuth"
+	const { getRole } = useAuth()
 
 	const router = useRouter()
 	const props = defineProps({ lesson: Object })

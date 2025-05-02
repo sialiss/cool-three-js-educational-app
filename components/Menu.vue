@@ -1,8 +1,7 @@
 <script setup>
 	import { useAuth } from "@/composables/useAuth" // Файл кастомного хука
 
-	const { isAuthenticated } = useAuth()
-	console.log("вход: ", isAuthenticated.value)
+	const { isAuthenticated, getRole } = useAuth()
 </script>
 
 <template>
@@ -19,6 +18,9 @@
 				<li v-if="!isAuthenticated"><NuxtLink to="/about" exact-active-class="active">О нас</NuxtLink></li>
 				<li v-if="isAuthenticated">
 					<NuxtLink to="/dashboard" exact-active-class="active">Панель обучения</NuxtLink>
+				</li>
+				<li v-if="getRole() == 'admin'">
+					<NuxtLink to="/adminpanel" exact-active-class="active">Панель администратора</NuxtLink>
 				</li>
 				<!-- <li>
 					<NuxtLink to="/cube" exact-active-class="active">Куб</NuxtLink>
@@ -53,9 +55,8 @@
 		gap: 1rem;
 		margin: 0;
 		padding: 0;
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		justify-content: center;
+		display: flex;
+		justify-content: space-around;
 		align-items: center;
 	}
 

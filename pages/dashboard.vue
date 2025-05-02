@@ -1,10 +1,12 @@
 <template>
 	<div class="dashboard">
-		<h1 class="title">Прогресс обучения</h1>
-		<div class="progress-bar">
-			<div class="progress" :style="{ width: progress + '%' }"></div>
+		<div v-if="getRole() == 'user'">
+			<h1 class="title">Прогресс обучения</h1>
+			<div class="progress-bar">
+				<div class="progress" :style="{ width: progress + '%' }"></div>
+			</div>
+			<p class="progress-text">{{ progress }}% завершено</p>
 		</div>
-		<p class="progress-text">{{ progress }}% завершено</p>
 
 		<h2 class="subtitle">Список уроков</h2>
 		<div class="lessons">
@@ -28,6 +30,8 @@
 <script setup>
 	import { ref, computed, onMounted, provide } from "vue"
 	import LessonDescription from "~/components/LessonDescription.vue"
+	import { useAuth } from "@/composables/useAuth"
+	const { getRole } = useAuth()
 
 	const lessons = ref([])
 	const selectedLesson = ref(null)
