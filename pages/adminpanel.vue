@@ -38,7 +38,7 @@
 						@click="selectUser(user)"
 						:class="{ admin: user.role === 'admin' }"
 					>
-						<span>{{ user.name }} ({{ user.login }})</span>
+						<span>{{ user.surname }} {{ user.name }} ({{ user.login }})</span>
 						<span v-if="user.role === 'admin'" class="status">👑</span>
 					</li>
 				</ul>
@@ -88,7 +88,9 @@
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				name: `${newUser.value.surname} ${newUser.value.name} ${newUser.value.patronymic}`.trim(),
+                surname: newUser.value.surname,
+                name: newUser.value.name,
+                patronymic: newUser.value.patronymic,
 				login: newUser.value.login,
 				role: newUser.value.role,
 				password: newUser.value.password,
