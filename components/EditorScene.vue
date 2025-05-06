@@ -123,31 +123,33 @@
 		spawnSlots()
 	}
 
-    function setModeRoad() {
-        mode = { name: "road", type: "basic", angle: 0 }
-        console.log(mode)
-    }
+	function setModeRoad() {
+		mode = { name: "road", type: "basic", angle: 0 }
+		console.log(mode)
+	}
 
 	function spawnSlots() {
 		// Spawn slots
 		for (let y = 0; y <= 21; y += 1) {
 			tiles.value.push([])
 			for (let x = 0; x <= 21; x += 1) {
-                const scale = 0.5
+				const scale = 0.5
 				let slotX = x * textureSize * scale
 				let slotY = y * textureSize * scale
 
 				const container = new Container()
 				container.position = new Point(center.x + slotX, center.y + slotY)
 				const slot = new Sprite(textures.grass)
-                slot.scale = scale
+				slot.scale = scale
 
 				if (level.field[y]?.[x]) {
 					tiles.value[y][x] = level.field[y][x]
 				}
 
 				container.eventMode = "static"
-				container.on("pointertap", () => onSlotClick(slot, x, y))
+				container.on("pointermove", event => {
+					if (event.pressure != 0) onSlotClick(slot, x, y)
+				})
 
 				container.addChild(slot)
 				app.stage.addChild(container)
@@ -177,7 +179,7 @@
 		// road mode
 		if (mode.name == "road") {
 			tiles.value[x][y] = { type: mode.type, angle: mode.angle }
-            slot.texture = textures.road
+			slot.texture = textures.road
 		}
 	}
 </script>
