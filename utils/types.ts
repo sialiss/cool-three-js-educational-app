@@ -5,7 +5,7 @@ export interface Vector2Like {
 
 export type Level = {
 	id: number
-	name: string
+	title: string
 	description: string
 	author: ""
 	field: Tile[][]

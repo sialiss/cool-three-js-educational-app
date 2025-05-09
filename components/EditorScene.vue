@@ -3,11 +3,12 @@
 		<div ref="canvasContainer" class="canvas-container"></div>
 		<div class="controls">
 			<div class="buttons">
-				<button data-action="close">❌</button>
-				<button data-action="save">💾</button>
+				<button @click="close" title="Выйти">❌</button>
+				<button @click="save" title="Сохранить">💾</button>
+				<button @click="clearAll" title="Очистить всё">🧹</button>
 			</div>
 			<div class="sections">
-				<details>
+				<details open>
 					<summary>Targets</summary>
 					<div>
 						<div>
@@ -36,33 +37,34 @@
 						</div>
 					</div>
 				</details>
-				<details>
+				<details open>
 					<summary>Modes</summary>
 					<div class="modes">
 						<div class="mode-buttons">
-							<button @click="setModeRoad" class="mode-button road"></button>
-							<input id="mode-input" type="number" min="0" step="90" value="0" disabled />
-						</div>
-						<div>
-							<p>Hexes</p>
-							<div class="hexes">
-								<div id="palette">
-									<button data-action="set-mode-stacks-delete" class="delete-hexes">🗑️</button>
-								</div>
+							<!-- Кнопки выбора дороги -->
+							<div class="road-texture-buttons">
+								<button
+									v-for="(url, name) in loadedUrls"
+									:key="name"
+									@click="setRoadType(name)"
+									:class="{ selected: mode.name === 'road' && mode.type === name }"
+									class="road-button"
+									:title="name"
+								>
+									<img :src="url" :alt="name" />
+								</button>
+							</div>
 
-								<details id="edit-colors-details" data-action="toggle:toggle-edit-color">
-									<summary><input type="checkbox" id="edit-colors-checkbox" />🌈 Edit Colors</summary>
-									<div class="color-management">
-										<p>Add Preset Colors</p>
-										<div class="preset-colors"></div>
-										<p>Add Custom Colors</p>
-										<div class="custom-color">
-											<img data-skin-icon="picker" alt="color picker" />
-											<input type="color" id="custom-color-input" value="#FFFFFF" />
-											<button data-action="add-color-to-palette">➕ Add this color</button>
-										</div>
-									</div>
-								</details>
+							<!-- Кнопки поворота -->
+							<div v-if="mode.name === 'road'" class="rotation-buttons">
+								<button
+									v-for="angle in [0, 90, 180, 270]"
+									:key="angle"
+									@click="setRoadRotation(angle)"
+									:class="{ selected: mode.angle === angle }"
+								>
+									{{ angle }}°
+								</button>
 							</div>
 						</div>
 					</div>
@@ -73,10 +75,15 @@
 </template>
 
 <script setup lang="ts">
-	import { onMounted, ref } from "vue"
-	import { Application, Assets, Color, Container, Point, Sprite, Text, Texture } from "pixi.js"
+	import { onMounted, ref, reactive } from "vue"
+	import { Application, Assets, Container, Point, Sprite, Texture } from "pixi.js"
 	import type { Level, Tile } from "../utils/types"
 	import { createDefaultLevel } from "../utils/level"
+	import { useRouter } from "vue-router"
+
+	const router = useRouter()
+
+	const loadedUrls: Record<string, string> = reactive({})
 
 	const canvasContainer = ref<HTMLDivElement | null>(null)
 	const app = new Application()
@@ -88,13 +95,19 @@
 	const textureUrls = {
 		grass: import("../assets/images/grass.png"),
 		road: import("../assets/images/road.png"),
+		road_with_line: import("../assets/images/road_with_line.png"),
+		road_with_wide_line: import("../assets/images/road_with_wide_line.png"),
+		road_with_long_dashes: import("../assets/images/road_with_long_dashes.png"),
+		road_with_wide_dashes: import("../assets/images/road_with_wide_dashes.png"),
+		road_with_dashes: import("../assets/images/road_with_dashes.png"),
+		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
 	}
 	const textures: Record<string, Texture> = {}
 	const slots = new Map<Sprite, Point>()
 
-	let mode: { name: "idle" } | { name: "grass" } | { name: "road"; type: string; angle: number } = {
+	const mode = ref<{ name: "idle" } | { name: "grass" } | { name: "road"; type: string; angle: number }>({
 		name: "idle",
-	}
+	})
 
 	onMounted(() => {
 		init()
@@ -112,20 +125,33 @@
 		await app.init({ width: 550, height: 550, backgroundColor: "F5F3E5" })
 		canvasContainer.value.append(app.canvas)
 
-		const texturePromises = Object.entries(textureUrls).map(
-			async ([name, importThing]) => (textures[name] = await Assets.load((await importThing).default))
-		)
+		const texturePromises = Object.entries(textureUrls).map(async ([name, importThing]) => {
+			const mod = await importThing
+			loadedUrls[name] = mod.default // путь к картинке
+			textures[name] = await Assets.load(mod.default)
+		})
 
 		await Promise.all(texturePromises)
+
 		// center.set(app.canvas.width / 2, app.canvas.height / 2)
 		app.canvas.style.touchAction = "auto"
 
 		spawnSlots()
 	}
 
-	function setModeRoad() {
-		mode = { name: "road", type: "basic", angle: 0 }
-		console.log(mode)
+	function setRoadType(type: string) {
+		if (mode.value.name === "road" && mode.value.type === type) {
+			mode.value = { name: "idle" }
+		} else {
+			mode.value = { name: "road", type, angle: 0 }
+		}
+		console.log(mode.value)
+	}
+
+	function setRoadRotation(angle: number) {
+		if (mode.value.name === "road") {
+			mode.value.angle = angle
+		}
 	}
 
 	function spawnSlots() {
@@ -134,13 +160,14 @@
 			tiles.value.push([])
 			for (let x = 0; x <= 21; x += 1) {
 				const scale = 0.5
-				let slotX = x * textureSize * scale
-				let slotY = y * textureSize * scale
+				let slotX = x * textureSize * scale + textureSize * 0.25
+				let slotY = y * textureSize * scale + textureSize * 0.25
 
 				const container = new Container()
 				container.position = new Point(center.x + slotX, center.y + slotY)
 				const slot = new Sprite(textures.grass)
 				slot.scale = scale
+				slot.anchor.set(0.5, 0.5)
 
 				if (level.field[y]?.[x]) {
 					tiles.value[y][x] = level.field[y][x]
@@ -156,30 +183,56 @@
 				slots.set(slot, new Point(x, y))
 			}
 		}
-
-		// for (const extra of level.extras) {
-		// const slot = findSlot(extra.position)
-		// if (!slot) continue
-		// // Spawn locked
-		// if (extra.type == "locked") {
-		// 	addLock(slot, slot.parent, extra.goal)
-		// }
-		// if (extra.type == "wood") {
-		// 	addWood(slot, slot.parent, extra.health)
-		// }
-		// // Spawn stacks
-		// else if (extra.type == "stack") {
-		// 	addStack(slot, extra.hexes)
-		// }
-		// }
 	}
 
 	function onSlotClick(slot: Sprite, x: number, y: number) {
 		// const slotContainer = slot.parent
-		// road mode
-		if (mode.name == "road") {
-			tiles.value[x][y] = { type: mode.type, angle: mode.angle }
-			slot.texture = textures.road
+		// road mode.value
+		if (mode.value.name == "road") {
+			tiles.value[x][y] = { type: mode.value.type, angle: mode.value.angle }
+			slot.texture = textures[mode.value.type]
+			slot.angle = mode.value.angle
+		}
+	}
+
+	function clearAll() {
+		for (const [sprite, pos] of slots.entries()) {
+			sprite.texture = textures.grass
+			sprite.angle = 0
+			tiles.value[pos.y][pos.x] = { type: "grass", angle: 0 }
+		}
+		mode.value = { name: "idle" }
+	}
+
+	function close() {
+		router.push("/dashboard")
+	}
+
+	async function save() {
+		const goalScoreInput = document.getElementById("goal-score") as HTMLInputElement
+
+		const levelToSave: Level = {
+			...level,
+			field: tiles.value,
+			goal: {
+				score: parseInt(goalScoreInput.value || "0"),
+			},
+		}
+
+		try {
+			const res = await fetch("http://localhost:8000/practice-lessons", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(levelToSave),
+			})
+			if (!res.ok) throw new Error(`Ошибка: ${res.statusText}`)
+
+			alert("Уровень успешно сохранён!")
+		} catch (err) {
+			console.error("Ошибка при сохранении:", err)
+			alert("Не удалось сохранить уровень.")
 		}
 	}
 </script>
@@ -235,5 +288,55 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+	}
+
+	.road-texture-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-bottom: 8px;
+	}
+
+	.road-button {
+		width: 40px;
+		height: 40px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		filter: brightness(0.5);
+		cursor: pointer;
+		transition: filter 0.2s, transform 0.2s;
+	}
+
+	.road-button.selected {
+		filter: brightness(1);
+		transform: scale(1.1);
+		border: 2px solid #007bff;
+		border-radius: 4px;
+	}
+
+	.road-button img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.rotation-buttons {
+		display: flex;
+		gap: 6px;
+	}
+
+	.rotation-buttons button {
+		padding: 4px 10px;
+		border: 1px solid #ccc;
+		background: #f0f0f0;
+		cursor: pointer;
+		border-radius: 4px;
+	}
+
+	.rotation-buttons button.selected {
+		background: #007bff;
+		color: white;
+		border-color: #007bff;
 	}
 </style>
