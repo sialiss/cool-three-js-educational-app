@@ -177,9 +177,9 @@
 
 	function spawnSlots() {
 		// Spawn slots
-		for (let y = 0; y <= 21; y += 1) {
+		for (let y = 0; y <= level.size.y; y += 1) {
 			tiles.value.push([])
-			for (let x = 0; x <= 21; x += 1) {
+			for (let x = 0; x <= level.size.x; x += 1) {
 				const scale = 0.5
 				let slotX = x * textureSize * scale + textureSize * 0.25
 				let slotY = y * textureSize * scale + textureSize * 0.25
@@ -233,6 +233,7 @@
 
 	async function save() {
 		const goalScoreInput = document.getElementById("goal-score") as HTMLInputElement
+        if (Number(selectedLessonId.value) == -1) alert("Не выбран урок.")
 		const levelToSave: Level = {
 			...level,
 			field: tiles.value,

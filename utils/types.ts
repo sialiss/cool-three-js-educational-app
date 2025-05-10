@@ -8,13 +8,15 @@ export type Level = {
 	title: string
 	description: string
 	author: ""
+	size: { x: number; y: number }
 	field: Tile[][]
 	extras: Extra[]
 	goal: Goal
-    lessonId: number
+	lessonId: number
 }
 
 export type CurrentLevel = {
+	size: { x: number; y: number }
 	field: Tile[][]
 	extras: Extra[]
 	goal: Goal

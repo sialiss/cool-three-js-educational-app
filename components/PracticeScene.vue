@@ -8,6 +8,37 @@
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 
+	import { useRoute } from "vue-router"
+	import type { Level } from "../utils/types"
+
+	const route = useRoute()
+	const levelData = ref<Level | null>(null)
+
+	const loadLevel = async () => {
+		const id = Number(route.params.id)
+		const res = await fetch(`http://localhost:8000/practice-lessons/${id}`, {
+			headers: { "Content-Type": "application/json" },
+		})
+		const data = await res.json()
+		levelData.value = data.lesson
+		console.log(levelData.value)
+	}
+
+	const textureLoader = new THREE.TextureLoader()
+	const textureUrls = {
+		grass: import("../assets/images/grass.png"),
+		road: import("../assets/images/road.png"),
+		road_with_line: import("../assets/images/road_with_line.png"),
+		road_with_wide_line: import("../assets/images/road_with_wide_line.png"),
+		road_with_long_dashes: import("../assets/images/road_with_long_dashes.png"),
+		road_with_wide_dashes: import("../assets/images/road_with_wide_dashes.png"),
+		road_with_dashes: import("../assets/images/road_with_dashes.png"),
+		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
+	}
+	const texturePromises = Object.fromEntries(
+		Object.entries(textureUrls).map(([key, path]) => [key, path.then(module => textureLoader.load(module.default))])
+	)
+
 	let scene: THREE.Scene
 	let camera: THREE.PerspectiveCamera
 	let renderer: THREE.WebGLRenderer
@@ -41,18 +72,24 @@
 		directionalLight.position.set(5, 5, 5)
 		scene.add(directionalLight)
 
-		const plane = new THREE.Mesh(
-			new THREE.PlaneGeometry(20, 20),
-			new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide })
-		)
-		plane.rotation.x = -Math.PI / 2
-		scene.add(plane)
+		const textureLoader = new THREE.TextureLoader()
+		textureLoader.load("../images/scattered-clouds-blue-sky.jpg", texture => {
+			const geometry = new THREE.SphereGeometry(500, 60, 40)
+			const material = new THREE.MeshBasicMaterial({
+				map: texture,
+				side: THREE.BackSide, // отрисовываем внутреннюю часть сферы
+			})
+			const skyDome = new THREE.Mesh(geometry, material)
+			scene.add(skyDome)
+		})
 
 		const loader = new GLTFLoader()
-		loader.load("models/Car3.glb?url", gltf => {
+		loader.load("../models/Car3.glb?url", gltf => {
 			car = gltf.scene
 			car.scale.set(0.5, 0.5, 0.5)
-			car.position.set(0, 0.5, 0)
+			const width = levelData.value?.size.x || 0
+			const length = levelData.value?.size.y || 0
+			car.position.set(width / 2, 0.1, length / 2)
 			scene.add(car)
 
 			wheels.Wheel1 = car.getObjectByName("Wheel1")!
@@ -64,6 +101,39 @@
 		})
 
 		camera.position.set(0, 5, 10)
+	}
+
+	const drawField = async (size: { x: number; y: number }, field: Tile[][]) => {
+		const textures = await Promise.all(Object.values(texturePromises))
+		const textureMap = Object.keys(textureUrls).reduce((map, key, i) => {
+			map[key] = textures[i]
+			return map
+		}, {} as Record<string, THREE.Texture>)
+
+		const tileSize = 3 // возможно стоит поставить 4
+
+		for (let y = 0; y < size.y; y++) {
+			if (!field[y]) field[y] = []
+			for (let x = 0; x < size.x; x++) {
+				let tile = field[y][x]
+				if (!tile) tile = { type: "grass", angle: 0 }
+				const texture = textureMap[tile.type]
+				if (!texture) continue
+
+				const material = new THREE.MeshBasicMaterial({ map: texture })
+				const geometry = new THREE.PlaneGeometry(tileSize, tileSize)
+				const mesh = new THREE.Mesh(geometry, material)
+				mesh.rotation.x = -Math.PI / 2
+				mesh.position.set(x * tileSize, 0 + 0.01, y * tileSize)
+
+				// если угол задан - поворачиваем
+				if (tile.angle) {
+					mesh.rotation.y = THREE.MathUtils.degToRad(tile.angle)
+				}
+
+				scene.add(mesh)
+			}
+		}
 	}
 
 	const animate = () => {
@@ -136,8 +206,13 @@
 		document.body.focus()
 	}
 
-	onMounted(() => {
-		init()
+	onMounted(async () => {
+		await loadLevel()
+		console.log(levelData.value)
+		if (levelData.value) {
+			init()
+			await drawField(levelData.value.size, levelData.value.field)
+		}
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)
 		window.addEventListener("resize", onWindowResize)
