@@ -1,7 +1,7 @@
 <template>
 	<div class="lesson-page">
 		<template v-if="lesson && !editing">
-			<h1>{{ lesson.title }}</h1>
+			<h1>{{ lesson.lesson.title }}</h1>
 			<div class="lesson-text" v-html="formattedLesson"></div>
 			<div class="buttons">
 				<button v-if="prevLesson" @click="goToPrevLesson">Назад</button>
@@ -27,7 +27,8 @@
 		<!-- Форма редактирования BB-кодами -->
 		<template v-if="editing && getRole() != 'user'">
 			<h2>Редактировать урок</h2>
-			<input v-model="lesson.title" placeholder="Заголовок" class="edit-input" />
+			<input v-model="lesson.lesson.title" placeholder="Заголовок" class="edit-input" />
+			<textarea v-model="lesson.lesson.description" placeholder="Описание урока" class="edit-textarea description" />
 			<div v-if="editing">
 				<div class="bb-toolbar">
 					<button @click="wrapBB('[b]', '[/b]')">Жирный</button>
@@ -63,7 +64,7 @@
 	import { useAuth } from "@/composables/useAuth"
 	import bbcode from "bbcode"
 
-	const { getRole, getToken, toggleComplete } = useAuth()
+	const { getRole, toggleComplete } = useAuth()
 
 	const route = useRoute()
 	const router = useRouter()
@@ -111,10 +112,6 @@
 		const currentLessonIndex = lessons.findIndex(l => l.id === lesson.value.id)
 		return lessons[currentLessonIndex - 1] || null
 	})
-
-	const goBack = () => {
-		router.push("/dashboard")
-	}
 
 	const nextLesson = computed(() => {
 		// Проверяем, если lessons пуст, возвращаем null
@@ -170,8 +167,8 @@
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					title: lesson.value.title,
-					description: lesson.value.description,
+					title: lesson.value.lesson.title,
+					description: lesson.value.lesson.description,
 					content: lessonContent.value,
 				}),
 			})
@@ -232,10 +229,8 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.lesson-page {
-		width: 100%;
-		height: 100%;
 		margin: auto;
 		padding: 20px;
 	}
@@ -293,6 +288,10 @@
 		border: 1px solid #ccc;
 		border-radius: 5px;
 		resize: vertical;
+	}
+	.edit-textarea.description {
+		margin-top: 10px;
+		min-height: 60px;
 	}
 	.edit-textarea.content {
 		height: 15rem;

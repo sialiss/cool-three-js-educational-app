@@ -11,6 +11,7 @@ export type Level = {
 	field: Tile[][]
 	extras: Extra[]
 	goal: Goal
+    lessonId: number
 }
 
 export type CurrentLevel = {

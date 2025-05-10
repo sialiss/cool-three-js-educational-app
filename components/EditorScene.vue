@@ -9,6 +9,19 @@
 			</div>
 			<div class="sections">
 				<details open>
+					<summary>Урок</summary>
+					<div class="lesson-select">
+						<label>Привязать к уроку:</label>
+						<select v-model="selectedLessonId">
+							<option disabled value="">Выберите урок</option>
+							<option v-for="lesson in lessons" :key="lesson.id" :value="lesson.id">
+								{{ lesson.title }}
+							</option>
+						</select>
+						<button @click="showModal = true">Создать новый</button>
+					</div>
+				</details>
+				<details open>
 					<summary>Targets</summary>
 					<div>
 						<div>
@@ -21,18 +34,6 @@
 								step="1"
 								value="50"
 								title="goal"
-							/>
-						</div>
-						<div>
-							<label for="goal-wood">Wood</label>
-							<input
-								id="goal-wood"
-								type="number"
-								placeholder="wood goal"
-								min="0"
-								step="1"
-								value="0"
-								title="wood goal"
 							/>
 						</div>
 					</div>
@@ -71,6 +72,19 @@
 				</details>
 			</div>
 		</div>
+		<div v-if="showModal" class="modal-overlay">
+			<div class="modal">
+				<h3>Создание нового урока</h3>
+				<label>Название:</label>
+				<input v-model="newLessonTitle" />
+				<label>Описание:</label>
+				<textarea v-model="newLessonDescription"></textarea>
+				<div class="modal-buttons">
+					<button @click="createLesson">Создать</button>
+					<button @click="showModal = false">Отмена</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -82,6 +96,12 @@
 	import { useRouter } from "vue-router"
 
 	const router = useRouter()
+
+	const lessons = ref<{ id: number; title: string }[]>([])
+	const selectedLessonId = ref("")
+	const showModal = ref(false)
+	const newLessonTitle = ref("")
+	const newLessonDescription = ref("")
 
 	const loadedUrls: Record<string, string> = reactive({})
 
@@ -111,6 +131,7 @@
 
 	onMounted(() => {
 		init()
+		loadLessons()
 
 		// window.addEventListener("keydown", handleKeyDown)
 		// window.addEventListener("keyup", handleKeyUp)
@@ -208,44 +229,75 @@
 		router.push("/dashboard")
 	}
 
+	// для сохранения
+
 	async function save() {
 		const goalScoreInput = document.getElementById("goal-score") as HTMLInputElement
-
 		const levelToSave: Level = {
 			...level,
 			field: tiles.value,
 			goal: {
 				score: parseInt(goalScoreInput.value || "0"),
 			},
+			lessonId: Number(selectedLessonId.value),
 		}
 
 		try {
 			const res = await fetch("http://localhost:8000/practice-lessons", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(levelToSave),
 			})
 			if (!res.ok) throw new Error(`Ошибка: ${res.statusText}`)
-
 			alert("Уровень успешно сохранён!")
 		} catch (err) {
 			console.error("Ошибка при сохранении:", err)
 			alert("Не удалось сохранить уровень.")
 		}
 	}
+
+	async function loadLessons() {
+		try {
+			const res = await fetch("http://localhost:8000/lessons")
+			lessons.value = await res.json()
+		} catch (err) {
+			console.error("Ошибка загрузки уроков:", err)
+		}
+	}
+
+	async function createLesson() {
+		try {
+			const res = await fetch("http://localhost:8000/lessons", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: newLessonTitle.value,
+					description: newLessonDescription.value,
+				}),
+			})
+			if (!res.ok) throw new Error("Ошибка при создании урока")
+			const lesson = await res.json()
+			lessons.value.push(lesson)
+			selectedLessonId.value = lesson.id
+			showModal.value = false
+			newLessonTitle.value = ""
+			newLessonDescription.value = ""
+		} catch (err) {
+			console.error("Ошибка создания урока:", err)
+			alert("Не удалось создать урок.")
+		}
+	}
 </script>
 
 <style>
 	.horizontalContainer {
+		/* width: 100%;
+		height: 100%; */
 		margin-top: 1rem;
 		display: flex;
 	}
 
 	.canvas-container {
-		/* 		width: 100%;
-		height: 100%; */
 		display: flex;
 		justify-content: center;
 		overflow: hidden;
@@ -275,13 +327,6 @@
 		flex-direction: row-reverse;
 		justify-content: end;
 		gap: 1rem;
-	}
-	[data-action="close"],
-	[data-action="save"] {
-		width: 6rem;
-		display: flex;
-		justify-content: center;
-		align-items: center;
 	}
 
 	.controls > .sections {
@@ -338,5 +383,118 @@
 		background: #007bff;
 		color: white;
 		border-color: #007bff;
+	}
+
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 999;
+	}
+
+	.modal {
+		background: #fff;
+		padding: 20px;
+		border-radius: 12px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+		width: 400px;
+		max-width: 90%;
+	}
+
+	.modal h3 {
+		margin-top: 0;
+	}
+
+	.modal label {
+		display: block;
+		margin-top: 10px;
+		font-weight: bold;
+	}
+
+	.modal input,
+	.modal textarea {
+		width: 100%;
+		padding: 8px;
+		margin-top: 4px;
+		border: 1px solid #ccc;
+		border-radius: 6px;
+	}
+
+	.modal-buttons {
+		margin-top: 16px;
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+	}
+
+	.modal-buttons button {
+		padding: 6px 12px;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		background-color: #4caf50;
+		color: white;
+		transition: background-color 0.2s ease;
+	}
+
+	.modal-buttons button:last-child {
+		background-color: #f44336;
+	}
+
+	.modal-buttons button:hover {
+		opacity: 0.9;
+	}
+
+	/* селект */
+	select {
+		width: 100%;
+	}
+
+	/* Эффект при наведении на селект */
+	.lesson-select:hover {
+		border-color: #4caf50;
+		box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+	}
+
+	/* Эффект активного состояния */
+	.lesson-select:focus {
+		border-color: #4caf50;
+		box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+		outline: none;
+	}
+
+	/* Стили для опций селекта */
+	.lesson-select option {
+		padding: 8px;
+		font-size: 14px;
+	}
+
+	/* Стили для кнопки выбора */
+	.lesson-select-btn {
+		padding: 10px 15px;
+		background-color: #4caf50;
+		color: #fff;
+		font-size: 16px;
+		border: none;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+	}
+
+	.lesson-select-btn:hover {
+		background-color: #45a049;
+	}
+
+	/* Стили для сообщения об ошибке */
+	.error-message {
+		color: red;
+		font-size: 14px;
+		margin-top: 5px;
 	}
 </style>

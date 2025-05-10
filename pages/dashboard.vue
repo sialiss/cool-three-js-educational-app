@@ -39,7 +39,7 @@
 	onMounted(async () => {
 		try {
 			// 1. Получаем все уроки
-			const resLessons = await fetch("http://localhost:8000/theory-lessons/", {
+			const resLessons = await fetch("http://localhost:8000/lessons/", {
 				headers: { "Content-Type": "application/json" },
 			})
 			if (!resLessons.ok) throw new Error("Не удалось загрузить уроки")

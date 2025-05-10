@@ -3,8 +3,13 @@
 		<h2>{{ lesson.title }}</h2>
 		<p>{{ lesson.description }}</p>
 		<div class="button-group">
-			<button @click="goToLesson(lesson.id)" class="primary">Открыть теорию</button>
-			<button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button>
+			<!-- Кнопка "Открыть теорию", только если есть теория -->
+			<button v-if="lesson.theory" @click="goToLesson(lesson.theory.id)" class="primary">Открыть теорию</button>
+
+			<!-- Кнопка "Открыть практику", только если есть практика -->
+			<button v-if="lesson.practice" @click="goToPractice(lesson.practice.id)" class="secondary">Открыть практику</button>
+
+			<!-- Кнопка "Пройдено" только для пользователей -->
 			<button
 				v-if="getRole() == 'user'"
 				@click="toggleCompletion(lesson.id)"
@@ -33,7 +38,7 @@
 	}
 
 	const goToPractice = id => {
-		router.push(`/lesson/${id}/practice`)
+		router.push(`/practice/${id}`)
 	}
 
 	const toggleCompletion = async id => {
