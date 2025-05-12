@@ -44,7 +44,7 @@
 	let renderer: THREE.WebGLRenderer
 	let car: THREE.Object3D
 	let wheels: Record<string, THREE.Object3D> = {}
-	let steeringWheel: THREE.Object3D | null = null
+	let steeringWheel: THREE.Object3D
 	let controls: OrbitControls
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
@@ -86,7 +86,7 @@
 		})
 
 		const loader = new GLTFLoader()
-		loader.load("../models/Car3.glb?url", gltf => {
+		loader.load("../models/Car3_2.glb?url", gltf => {
 			car = gltf.scene
 			car.scale.set(0.5, 0.5, 0.5)
 			const width = levelData.value?.size.x || 0
@@ -98,17 +98,7 @@
 			wheels.Wheel2 = car.getObjectByName("Wheel2")!
 			wheels.Wheel3 = car.getObjectByName("Wheel3")!
 			wheels.Wheel4 = car.getObjectByName("Wheel4")!
-
-			loader.load("../models/steeringwheel2.glb?url", gltf => {
-				steeringWheel = gltf.scene
-				steeringWheel.scale.set(0.07, 0.07, 0.07)
-
-				// const carPosition = new THREE.Vector3()
-				// car.getWorldPosition(carPosition)
-				steeringWheel.position.set(0.9, 1.6, 1.7)
-
-				car.add(steeringWheel)
-			})
+			steeringWheel = car.getObjectByName("Steer")!
 
 			animate()
 		})
@@ -213,11 +203,18 @@
 
 	const steeringWheelTurnSpeed = 0.5 // Скорость поворота руля, настраиваемая по желанию
 	const updateSteeringWheel = () => {
-		if (steeringWheel && wheels.Wheel1 && wheels.Wheel2) {
-			// Задаём поворот руля в зависимости от поворота передних колёс
-			const frontWheelRotation = wheels.Wheel1.rotation.y
-			steeringWheel.rotation.z = frontWheelRotation * steeringWheelTurnSpeed
-		}
+		if (!steeringWheel) return
+
+		const maxSteeringAngle = Math.PI / 4
+		const turnSpeed = 0.05
+
+		// Целевой угол поворота
+		let targetAngle = 0
+		if (keys.a || keys.ф) targetAngle = maxSteeringAngle
+		if (keys.d || keys.в) targetAngle = -maxSteeringAngle
+
+		// Плавное приближение текущего угла к целевому
+		steeringWheel.rotation.y += (targetAngle - steeringWheel.rotation.y) * turnSpeed
 	}
 
 	let lastFrameTime = 0
@@ -271,12 +268,18 @@
 			car.getWorldPosition(carPosition)
 
 			const cameraOffset = carDirection.clone().multiplyScalar(0.5)
-			const heightOffset = new THREE.Vector3(0, 1.1, 0) // выше
-			const backwardOffset = carDirection.clone().multiplyScalar(-0.4)
+			const heightOffset = new THREE.Vector3(0, 0.9, 0) // выше
+			const backwardOffset = carDirection.clone().multiplyScalar(-0.37)
+			const leftOffset = new THREE.Vector3()
+				.crossVectors(carDirection, new THREE.Vector3(0, -0.3, 0))
+				.multiplyScalar(0.2)
 
-			camera.position.copy(carPosition).add(cameraOffset).add(heightOffset).add(backwardOffset)
+			camera.position.copy(carPosition).add(cameraOffset).add(heightOffset).add(backwardOffset).add(leftOffset)
 
-			const lookAtTarget = carPosition.clone().add(carDirection.clone().multiplyScalar(10))
+			const lookAtTarget = carPosition
+				.clone()
+				.add(carDirection.clone().multiplyScalar(10))
+				.add(new THREE.Vector3(0, 2.5, 0))
 			camera.lookAt(lookAtTarget)
 		} else {
 			controls.target.set(car.position.x, car.position.y, car.position.z)
