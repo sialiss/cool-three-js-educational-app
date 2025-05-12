@@ -47,6 +47,7 @@
 	let controls: OrbitControls
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
+	let isFirstPerson = false
 
 	const init = () => {
 		scene = new THREE.Scene()
@@ -73,7 +74,7 @@
 		scene.add(directionalLight)
 
 		const textureLoader = new THREE.TextureLoader()
-		textureLoader.load("../images/scattered-clouds-blue-sky.jpg", texture => {
+		textureLoader.load("../images/Skyboxes/BlueSkySkybox.png", texture => {
 			const geometry = new THREE.SphereGeometry(500, 60, 40)
 			const material = new THREE.MeshBasicMaterial({
 				map: texture,
@@ -103,15 +104,23 @@
 		camera.position.set(0, 5, 10)
 	}
 
-	const drawField = async (size: { x: number; y: number }, field: Tile[][]) => {
+	const drawField = async (
+		size: { x: number; y: number },
+		field: Tile[][],
+		scene: THREE.Scene,
+		withWalls = true,
+		withBuildings = true
+	) => {
+		const tileSize = 4
+
+		// Загрузка текстур
 		const textures = await Promise.all(Object.values(texturePromises))
 		const textureMap = Object.keys(textureUrls).reduce((map, key, i) => {
 			map[key] = textures[i]
 			return map
 		}, {} as Record<string, THREE.Texture>)
 
-		const tileSize = 3 // возможно стоит поставить 4
-
+		// Построение поля
 		for (let y = 0; y < size.y; y++) {
 			if (!field[y]) field[y] = []
 			for (let x = 0; x < size.x; x++) {
@@ -124,15 +133,69 @@
 				const geometry = new THREE.PlaneGeometry(tileSize, tileSize)
 				const mesh = new THREE.Mesh(geometry, material)
 				mesh.rotation.x = -Math.PI / 2
-				mesh.position.set(x * tileSize, 0 + 0.01, y * tileSize)
+				mesh.position.set(y * tileSize, 0.01, x * tileSize)
 
-				// если угол задан - поворачиваем
 				if (tile.angle) {
-					mesh.rotation.y = THREE.MathUtils.degToRad(tile.angle)
+					mesh.rotation.z = -THREE.MathUtils.degToRad(tile.angle)
 				}
 
 				scene.add(mesh)
 			}
+		}
+
+		// Добавляем невидимые стены по границе
+		if (withWalls) {
+			const wallHeight = 2
+			const wallThickness = 0.1
+			const wallMaterial = new THREE.MeshBasicMaterial({ visible: true })
+
+			for (let y = 0; y < size.y; y++) {
+				;[
+					[-1, y],
+					[size.x, y],
+				].forEach(([x, y]) => {
+					const geometry = new THREE.BoxGeometry(wallThickness, wallHeight, tileSize)
+					const wall = new THREE.Mesh(geometry, wallMaterial)
+					wall.position.set(x * tileSize, wallHeight / 2, y * tileSize)
+					scene.add(wall)
+				})
+			}
+			for (let x = 0; x < size.x; x++) {
+				;[
+					[x, -1],
+					[x, size.y],
+				].forEach(([x, y]) => {
+					const geometry = new THREE.BoxGeometry(tileSize, wallHeight, wallThickness)
+					const wall = new THREE.Mesh(geometry, wallMaterial)
+					wall.position.set(x * tileSize, wallHeight / 2, y * tileSize)
+					scene.add(wall)
+				})
+			}
+		}
+
+		// Загружаем и размещаем домики по периметру
+		if (withBuildings) {
+			const loader = new GLTFLoader()
+			loader.load("../models/coolhouse.glb?url", gltf => {
+				const buildingModel = gltf.scene
+				let tileSize = 18
+
+				const addBuilding = (x: number, y: number) => {
+					const building = buildingModel.clone()
+					building.scale.set(0.8, 0.8, 0.8)
+					building.position.set(x * tileSize, 0, y * tileSize)
+					scene.add(building)
+				}
+
+				for (let y = 0; y < size.y / tileSize; y++) {
+					addBuilding(-1.5, y)
+					addBuilding(size.x + tileSize, y + tileSize)
+				}
+				for (let x = 0; x < size.x / tileSize; x++) {
+					addBuilding(x, -1.5)
+					addBuilding(x + tileSize, size.y + tileSize)
+				}
+			})
 		}
 	}
 
@@ -145,6 +208,23 @@
 
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
+
+		if (isFirstPerson) {
+			const carDirection = new THREE.Vector3()
+			car.getWorldDirection(carDirection)
+
+			const carPosition = new THREE.Vector3()
+			car.getWorldPosition(carPosition)
+
+			const cameraOffset = carDirection.clone().multiplyScalar(1.5)
+			camera.position.copy(carPosition).add(cameraOffset).add(new THREE.Vector3(0.1, 1.2, 0))
+
+			const lookAtTarget = carPosition.clone().negate().add(carDirection.clone().multiplyScalar(10))
+			camera.lookAt(lookAtTarget)
+		} else {
+			controls.target.set(car.position.x, car.position.y, car.position.z)
+			controls.update()
+		}
 
 		if (keys.w || keys.ц) {
 			car.position.addScaledVector(direction, speed)
@@ -183,6 +263,9 @@
 		if (event.key in keys) {
 			keys[event.key as keyof typeof keys] = true
 		}
+		if (event.key === "1") {
+			toggleCameraMode()
+		}
 	}
 
 	const handleKeyUp = (event: KeyboardEvent) => {
@@ -206,12 +289,21 @@
 		document.body.focus()
 	}
 
+	const toggleCameraMode = () => {
+		isFirstPerson = !isFirstPerson
+		if (isFirstPerson) {
+			controls.enabled = false
+		} else {
+			controls.enabled = true
+		}
+	}
+
 	onMounted(async () => {
 		await loadLevel()
 		console.log(levelData.value)
 		if (levelData.value) {
 			init()
-			await drawField(levelData.value.size, levelData.value.field)
+			await drawField(levelData.value.size, levelData.value.field, scene, true, true)
 		}
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)

@@ -25,9 +25,6 @@
 				<li v-if="getRole() == 'admin'">
 					<NuxtLink to="/editor" exact-active-class="active">Редактор практики</NuxtLink>
 				</li>
-				<li v-if="isAuthenticated">
-					<NuxtLink to="/cars" exact-active-class="active">Машинки</NuxtLink>
-				</li>
 			</ul>
 		</nav>
 	</div>

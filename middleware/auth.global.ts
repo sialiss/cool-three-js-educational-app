@@ -16,7 +16,7 @@ export default defineNuxtRouteMiddleware((to: { path: string }, from: { path: st
 		return navigateTo("/dashboard")
 	}
 
-    if (getRole() !== "admin" && ["/adminpanel"].includes(to.path)) {
+    if (getRole() !== "admin" && ["/adminpanel", "/editor"].includes(to.path)) {
         if (isAuthenticated.value) return navigateTo("/dashboard")
 		else return navigateTo("/login")
 	}
