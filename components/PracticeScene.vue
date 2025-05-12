@@ -44,6 +44,7 @@
 	let renderer: THREE.WebGLRenderer
 	let car: THREE.Object3D
 	let wheels: Record<string, THREE.Object3D> = {}
+	let steeringWheel: THREE.Object3D | null = null
 	let controls: OrbitControls
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
@@ -97,6 +98,17 @@
 			wheels.Wheel2 = car.getObjectByName("Wheel2")!
 			wheels.Wheel3 = car.getObjectByName("Wheel3")!
 			wheels.Wheel4 = car.getObjectByName("Wheel4")!
+
+			loader.load("../models/steeringwheel2.glb?url", gltf => {
+				steeringWheel = gltf.scene
+				steeringWheel.scale.set(0.07, 0.07, 0.07)
+
+				// const carPosition = new THREE.Vector3()
+				// car.getWorldPosition(carPosition)
+				steeringWheel.position.set(0.9, 1.6, 1.7)
+
+				car.add(steeringWheel)
+			})
 
 			animate()
 		})
@@ -199,8 +211,22 @@
 		}
 	}
 
-	const animate = () => {
+	const steeringWheelTurnSpeed = 0.5 // Скорость поворота руля, настраиваемая по желанию
+	const updateSteeringWheel = () => {
+		if (steeringWheel && wheels.Wheel1 && wheels.Wheel2) {
+			// Задаём поворот руля в зависимости от поворота передних колёс
+			const frontWheelRotation = wheels.Wheel1.rotation.y
+			steeringWheel.rotation.z = frontWheelRotation * steeringWheelTurnSpeed
+		}
+	}
+
+	let lastFrameTime = 0
+	const fps = 60
+	const frameDuration = 1000 / fps
+	const animate = (time: number = 0) => {
 		requestAnimationFrame(animate)
+		if (time - lastFrameTime < frameDuration) return
+		lastFrameTime = time
 		const speed = 0.1
 		const rotationSpeed = 0.03
 		const maxSteerAngle = Math.PI / 6 // Максимальный угол поворота передних колёс (30°)
@@ -208,23 +234,6 @@
 
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
-
-		if (isFirstPerson) {
-			const carDirection = new THREE.Vector3()
-			car.getWorldDirection(carDirection)
-
-			const carPosition = new THREE.Vector3()
-			car.getWorldPosition(carPosition)
-
-			const cameraOffset = carDirection.clone().multiplyScalar(1.5)
-			camera.position.copy(carPosition).add(cameraOffset).add(new THREE.Vector3(0.1, 1.2, 0))
-
-			const lookAtTarget = carPosition.clone().negate().add(carDirection.clone().multiplyScalar(10))
-			camera.lookAt(lookAtTarget)
-		} else {
-			controls.target.set(car.position.x, car.position.y, car.position.z)
-			controls.update()
-		}
 
 		if (keys.w || keys.ц) {
 			car.position.addScaledVector(direction, speed)
@@ -254,8 +263,27 @@
 		wheels.Wheel2.rotation.y += (targetSteerAngle - wheels.Wheel2.rotation.y) * steerReturnSpeed
 
 		// Центрируем камеру на машине
-		controls.target.set(car.position.x, car.position.y, car.position.z)
-		controls.update()
+		if (isFirstPerson) {
+			const carDirection = new THREE.Vector3()
+			car.getWorldDirection(carDirection)
+
+			const carPosition = new THREE.Vector3()
+			car.getWorldPosition(carPosition)
+
+			const cameraOffset = carDirection.clone().multiplyScalar(0.5)
+			const heightOffset = new THREE.Vector3(0, 1.1, 0) // выше
+			const backwardOffset = carDirection.clone().multiplyScalar(-0.4)
+
+			camera.position.copy(carPosition).add(cameraOffset).add(heightOffset).add(backwardOffset)
+
+			const lookAtTarget = carPosition.clone().add(carDirection.clone().multiplyScalar(10))
+			camera.lookAt(lookAtTarget)
+		} else {
+			controls.target.set(car.position.x, car.position.y, car.position.z)
+			controls.update()
+		}
+
+		updateSteeringWheel()
 		renderer.render(scene, camera)
 	}
 
