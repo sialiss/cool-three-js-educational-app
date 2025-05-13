@@ -30,17 +30,18 @@ export type Tile = {
 
 export type Extra =
 	| {
-			type: "traffic light"
+			type: "trafficlight"
 			position: Vector2Like
 	  }
 	| {
-			type: "wood"
-			health: number
-			position: Vector2Like
-	  }
-	| {
-			type: "brick"
+			type: "sign"
+            name: string
 			radius: number
+			function: string
+			position: Vector2Like
+	  }
+	| {
+			type: "crosswalk"
 			position: Vector2Like
 	  }
 

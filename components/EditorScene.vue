@@ -70,6 +70,29 @@
 						</div>
 					</div>
 				</details>
+				<details open>
+					<summary>Extras</summary>
+					<div class="extras-buttons">
+						<button
+							@click="setExtraMode('trafficlight')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'trafficlight', active: true }"
+						>
+							🚦
+						</button>
+						<button
+							@click="setExtraMode('sign')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'sign', active: true }"
+						>
+							🚧
+						</button>
+						<button
+							@click="setExtraMode('crosswalk')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'crosswalk', active: true }"
+						>
+							🚶‍♂️
+						</button>
+					</div>
+				</details>
 			</div>
 		</div>
 		<div v-if="showModal" class="modal-overlay">
@@ -85,6 +108,32 @@
 				</div>
 			</div>
 		</div>
+		<!-- <div v-if="editExtra" class="modal-overlay">
+			<div class="modal">
+				<h3>Редактировать {{ getExtraLabel(editExtra.type) }}</h3>
+
+				<label>Имя:</label>
+				<input v-model="editExtra.name" />
+
+				<div v-if="editExtra.function !== undefined">
+					<label>Функция:</label>
+					<select v-model="editExtra.function">
+						<option value="warn">Предупреждение</option>
+						<option value="stop">Остановка</option>
+						<option value="yield">Уступи</option>
+					</select>
+				</div>
+
+				<div v-if="editExtra.radius !== undefined">
+					<label>Радиус:</label>
+					<input type="number" v-model.number="editExtra.radius" />
+				</div>
+
+				<div class="modal-buttons">
+					<button @click="editExtra = null">Закрыть</button>
+				</div>
+			</div>
+		</div> -->
 	</div>
 </template>
 
@@ -110,6 +159,7 @@
 	const center = new Point()
 	const level: Level = createDefaultLevel()
 	const tiles = ref<Tile[][]>([])
+	const extrasLayer = new Container()
 
 	const textureSize = 50
 	const textureUrls = {
@@ -125,9 +175,14 @@
 	const textures: Record<string, Texture> = {}
 	const slots = new Map<Sprite, Point>()
 
-	const mode = ref<{ name: "idle" } | { name: "grass" } | { name: "road"; type: string; angle: number }>({
-		name: "idle",
-	})
+	type Mode =
+		| { name: "idle" }
+		| { name: "grass" }
+		| { name: "road"; type: string; angle: number }
+		| { name: "extra"; extraType: "trafficlight" | "sign" | "crosswalk" }
+
+	const mode = ref<Mode>({ name: "idle" })
+	const editExtra = ref<Extra | null>(null)
 
 	onMounted(() => {
 		init()
@@ -175,6 +230,15 @@
 		}
 	}
 
+	function setExtraMode(extraType: "trafficlight" | "sign" | "crosswalk") {
+		if (mode.value.name === "extra" && mode.value.extraType === extraType) {
+			mode.value = { name: "idle" }
+		} else {
+			mode.value = { name: "extra", extraType }
+		}
+		console.log(mode.value)
+	}
+
 	function spawnSlots() {
 		// Spawn slots
 		for (let y = 0; y <= level.size.y; y += 1) {
@@ -185,6 +249,7 @@
 				let slotY = y * textureSize * scale + textureSize * 0.25
 
 				const container = new Container()
+
 				container.position = new Point(center.x + slotX, center.y + slotY)
 				const slot = new Sprite(textures.grass)
 				slot.scale = scale
@@ -201,18 +266,58 @@
 
 				container.addChild(slot)
 				app.stage.addChild(container)
+				app.stage.addChild(extrasLayer)
 				slots.set(slot, new Point(x, y))
 			}
 		}
 	}
 
 	function onSlotClick(slot: Sprite, x: number, y: number) {
-		// const slotContainer = slot.parent
-		// road mode.value
 		if (mode.value.name == "road") {
-			tiles.value[x][y] = { type: mode.value.type, angle: mode.value.angle }
+			tiles.value[y][x] = { type: mode.value.type, angle: mode.value.angle }
 			slot.texture = textures[mode.value.type]
 			slot.angle = mode.value.angle
+		}
+
+		if (mode.value.name === "extra") {
+			let newExtra: Extra
+			switch (mode.value.extraType) {
+				case "trafficlight":
+					newExtra = { type: "trafficlight", position: { x, y } }
+					break
+				case "crosswalk":
+					newExtra = { type: "crosswalk", position: { x, y } }
+					break
+				case "sign":
+					newExtra = {
+						type: "sign",
+						name: "default", // можно добавить UI позже
+						function: "warn",
+						radius: 1,
+						position: { x, y },
+					}
+					break
+			}
+			level.extras.push(newExtra)
+
+			// Примитивная визуализация
+			const marker = new Sprite(Texture.WHITE)
+			marker.tint = mode.value.extraType != "trafficlight" ? 0xffffff : 0xff0000
+			marker.width = mode.value.extraType === "crosswalk" ? textureSize * 0.5 : 5
+			marker.height = mode.value.extraType === "crosswalk" ? textureSize * 0.5 : 5
+			const pos = slots.get(slot)
+			if (pos) {
+				marker.position.set(pos.x * textureSize * 0.5, pos.y * textureSize * 0.5)
+			}
+
+			if (mode.value.extraType === "sign") {
+				marker.eventMode = "static"
+				marker.cursor = "pointer"
+				marker.on("pointertap", () => {
+					editExtra.value = newExtra as Extra
+				})
+			}
+			extrasLayer.addChild(marker)
 		}
 	}
 
@@ -222,6 +327,8 @@
 			sprite.angle = 0
 			tiles.value[pos.y][pos.x] = { type: "grass", angle: 0 }
 		}
+		level.extras = []
+		extrasLayer.removeChildren()
 		mode.value = { name: "idle" }
 	}
 
@@ -233,13 +340,14 @@
 
 	async function save() {
 		const goalScoreInput = document.getElementById("goal-score") as HTMLInputElement
-        if (Number(selectedLessonId.value) == -1) alert("Не выбран урок.")
+		if (Number(selectedLessonId.value) == -1) alert("Не выбран урок.")
 		const levelToSave: Level = {
 			...level,
 			field: tiles.value,
 			goal: {
 				score: parseInt(goalScoreInput.value || "0"),
 			},
+			extras: level.extras,
 			lessonId: Number(selectedLessonId.value),
 		}
 
@@ -497,5 +605,16 @@
 		color: red;
 		font-size: 14px;
 		margin-top: 5px;
+	}
+
+	button.selected {
+		filter: brightness(1);
+		transform: scale(1.1);
+		border: 2px solid #007bff;
+		border-radius: 4px;
+	}
+
+	button:active {
+		transform: scale(0.95);
 	}
 </style>
