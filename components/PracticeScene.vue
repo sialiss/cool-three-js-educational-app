@@ -109,6 +109,61 @@
 		camera.position.set(0, 5, 10)
 	}
 
+	const modelPaths = [
+		{ name: "coolhouse", path: "../models/coolhouse.glb?url" },
+		{ name: "whitehouse", path: "../models/whitehouse.glb?url" },
+		{ name: "pinkhouse", path: "../models/pinkhouse.glb?url" },
+	]
+
+	const loadModels = async () => {
+		const loader = new GLTFLoader()
+		const promises = modelPaths.map(
+			info =>
+				new Promise<{ name: string; scene: THREE.Object3D; width: number }>((resolve, reject) => {
+					loader.load(info.path, gltf => {
+						const model = gltf.scene
+						model.scale.set(0.5, 0.5, 0.5)
+
+						// Получаем ширину bounding box
+						const box = new THREE.Box3().setFromObject(model)
+						const size = new THREE.Vector3()
+						box.getSize(size)
+
+						resolve({ name: info.name, scene: model, width: size.x })
+					})
+				})
+		)
+		return Promise.all(promises)
+	}
+
+	const placeBuildingsAlongSide = (
+		start: THREE.Vector3,
+		direction: THREE.Vector3,
+		length: number,
+		scene: THREE.Scene,
+		models: { scene: THREE.Object3D; width: number }[]
+	) => {
+		let position = 0
+		while (position <= length) {
+			const modelData = models[Math.floor(Math.random() * models.length)]
+			if (position > length) break
+
+			const building = modelData.scene.clone()
+			const offset = direction.clone().multiplyScalar(position + modelData.width / 2)
+			const finalPos = start.clone().add(offset)
+			building.position.copy(finalPos)
+
+			// Правильный поворот модели внутрь поля
+			if (direction.z === 1 && start.x < 0) building.rotation.y = Math.PI / 2
+			else if (direction.z === 1  && start.x > 0) building.rotation.y = -Math.PI / 2
+			else if (direction.x === 1  && start.z > 0) building.rotation.y = -Math.PI
+			else if (direction.x === 1  && start.z < 0) building.rotation.y = 0
+
+			scene.add(building)
+			position += modelData.width
+		}
+	}
+
 	const drawField = async (
 		size: { x: number; y: number },
 		field: Tile[][],
@@ -180,27 +235,36 @@
 
 		// Загружаем и размещаем домики по периметру
 		if (withBuildings) {
-			const loader = new GLTFLoader()
-			loader.load("../models/coolhouse.glb?url", gltf => {
-				const buildingModel = gltf.scene
-				let tileSize = 18
-
-				const addBuilding = (x: number, y: number) => {
-					const building = buildingModel.clone()
-					building.scale.set(0.8, 0.8, 0.8)
-					building.position.set(x * tileSize, 0, y * tileSize)
-					scene.add(building)
-				}
-
-				for (let y = 0; y < size.y / tileSize; y++) {
-					addBuilding(-1.5, y)
-					addBuilding(size.x + tileSize, y + tileSize)
-				}
-				for (let x = 0; x < size.x / tileSize; x++) {
-					addBuilding(x, -1.5)
-					addBuilding(x + tileSize, size.y + tileSize)
-				}
-			})
+			const models = await loadModels()
+			const sideLength = (size.x+2) * tileSize
+			placeBuildingsAlongSide(
+				new THREE.Vector3(-tileSize*2, 0, -tileSize+tileSize*0.2),
+				new THREE.Vector3(1, 0, 0),
+				sideLength,
+				scene,
+				models
+			)
+			placeBuildingsAlongSide(
+				new THREE.Vector3(-tileSize, 0, size.y * tileSize-tileSize*0.2),
+				new THREE.Vector3(1, 0, 0),
+				sideLength,
+				scene,
+				models
+			)
+			placeBuildingsAlongSide(
+				new THREE.Vector3(-tileSize+tileSize*0.2, 0, -tileSize),
+				new THREE.Vector3(0, 0, 1),
+				(size.y+2) * tileSize,
+				scene,
+				models
+			)
+			placeBuildingsAlongSide(
+				new THREE.Vector3(size.x * tileSize-tileSize*0.2, 0, -tileSize),
+				new THREE.Vector3(0, 0, 1),
+				(size.y+2) * tileSize,
+				scene,
+				models
+			)
 		}
 	}
 
