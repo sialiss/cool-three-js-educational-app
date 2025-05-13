@@ -155,9 +155,9 @@
 
 			// Правильный поворот модели внутрь поля
 			if (direction.z === 1 && start.x < 0) building.rotation.y = Math.PI / 2
-			else if (direction.z === 1  && start.x > 0) building.rotation.y = -Math.PI / 2
-			else if (direction.x === 1  && start.z > 0) building.rotation.y = -Math.PI
-			else if (direction.x === 1  && start.z < 0) building.rotation.y = 0
+			else if (direction.z === 1 && start.x > 0) building.rotation.y = -Math.PI / 2
+			else if (direction.x === 1 && start.z > 0) building.rotation.y = -Math.PI
+			else if (direction.x === 1 && start.z < 0) building.rotation.y = 0
 
 			scene.add(building)
 			position += modelData.width
@@ -180,12 +180,20 @@
 			return map
 		}, {} as Record<string, THREE.Texture>)
 
-		// Построение поля
-		for (let y = 0; y < size.y; y++) {
-			if (!field[y]) field[y] = []
-			for (let x = 0; x < size.x; x++) {
-				let tile = field[y][x]
-				if (!tile) tile = { type: "grass", angle: 0 }
+		// Построение поля с расширением по 3 тайла с каждой стороны
+		const grassTile: Tile = { type: "grass", angle: 0 }
+
+		for (let y = -3; y < size.y + 3; y++) {
+			for (let x = -3; x < size.x + 3; x++) {
+				let tile: Tile
+
+				// Проверяем, есть ли реальный тайл внутри границ
+				if (y >= 0 && y < size.y && x >= 0 && x < size.x) {
+					tile = field[y]?.[x] ?? grassTile
+				} else {
+					tile = grassTile
+				}
+
 				const texture = textureMap[tile.type]
 				if (!texture) continue
 
@@ -207,11 +215,11 @@
 		if (withWalls) {
 			const wallHeight = 2
 			const wallThickness = 0.1
-			const wallMaterial = new THREE.MeshBasicMaterial({ visible: true })
+			const wallMaterial = new THREE.MeshBasicMaterial({ visible: false })
 
 			for (let y = 0; y < size.y; y++) {
 				;[
-					[-1, y],
+					[-0.5, y],
 					[size.x, y],
 				].forEach(([x, y]) => {
 					const geometry = new THREE.BoxGeometry(wallThickness, wallHeight, tileSize)
@@ -222,7 +230,7 @@
 			}
 			for (let x = 0; x < size.x; x++) {
 				;[
-					[x, -1],
+					[x, -0.5],
 					[x, size.y],
 				].forEach(([x, y]) => {
 					const geometry = new THREE.BoxGeometry(tileSize, wallHeight, wallThickness)
@@ -236,32 +244,32 @@
 		// Загружаем и размещаем домики по периметру
 		if (withBuildings) {
 			const models = await loadModels()
-			const sideLength = (size.x+2) * tileSize
+			const sideLength = (size.x + 2) * tileSize
 			placeBuildingsAlongSide(
-				new THREE.Vector3(-tileSize*2, 0, -tileSize+tileSize*0.2),
+				new THREE.Vector3(-tileSize * 2, 0, -tileSize + tileSize * 0.2),
 				new THREE.Vector3(1, 0, 0),
 				sideLength,
 				scene,
 				models
 			)
 			placeBuildingsAlongSide(
-				new THREE.Vector3(-tileSize, 0, size.y * tileSize-tileSize*0.2),
+				new THREE.Vector3(-tileSize, 0, size.y * tileSize - tileSize * 0.2),
 				new THREE.Vector3(1, 0, 0),
 				sideLength,
 				scene,
 				models
 			)
 			placeBuildingsAlongSide(
-				new THREE.Vector3(-tileSize+tileSize*0.2, 0, -tileSize),
+				new THREE.Vector3(-tileSize + tileSize * 0.2, 0, -tileSize),
 				new THREE.Vector3(0, 0, 1),
-				(size.y+2) * tileSize,
+				(size.y + 2) * tileSize,
 				scene,
 				models
 			)
 			placeBuildingsAlongSide(
-				new THREE.Vector3(size.x * tileSize-tileSize*0.2, 0, -tileSize),
+				new THREE.Vector3(size.x * tileSize - tileSize * 0.2, 0, -tileSize),
 				new THREE.Vector3(0, 0, 1),
-				(size.y+2) * tileSize,
+				(size.y + 2) * tileSize,
 				scene,
 				models
 			)
