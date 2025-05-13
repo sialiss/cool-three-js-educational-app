@@ -108,32 +108,7 @@
 				</div>
 			</div>
 		</div>
-		<!-- <div v-if="editExtra" class="modal-overlay">
-			<div class="modal">
-				<h3>Редактировать {{ getExtraLabel(editExtra.type) }}</h3>
-
-				<label>Имя:</label>
-				<input v-model="editExtra.name" />
-
-				<div v-if="editExtra.function !== undefined">
-					<label>Функция:</label>
-					<select v-model="editExtra.function">
-						<option value="warn">Предупреждение</option>
-						<option value="stop">Остановка</option>
-						<option value="yield">Уступи</option>
-					</select>
-				</div>
-
-				<div v-if="editExtra.radius !== undefined">
-					<label>Радиус:</label>
-					<input type="number" v-model.number="editExtra.radius" />
-				</div>
-
-				<div class="modal-buttons">
-					<button @click="editExtra = null">Закрыть</button>
-				</div>
-			</div>
-		</div> -->
+		<ExtraEditor v-if="editExtra" :extra="editExtra" @close="editExtra = null" />
 	</div>
 </template>
 
@@ -197,7 +172,6 @@
 	const init = async () => {
 		if (!canvasContainer.value) return
 
-		// await app.init({ width: 600, height: 600, backgroundColor: "F5F3E5" })
 		await app.init({ width: 550, height: 550, backgroundColor: "F5F3E5" })
 		canvasContainer.value.append(app.canvas)
 
@@ -221,7 +195,6 @@
 		} else {
 			mode.value = { name: "road", type, angle: 0 }
 		}
-		console.log(mode.value)
 	}
 
 	function setRoadRotation(angle: number) {
@@ -236,7 +209,6 @@
 		} else {
 			mode.value = { name: "extra", extraType }
 		}
-		console.log(mode.value)
 	}
 
 	function spawnSlots() {
@@ -291,9 +263,9 @@
 				case "sign":
 					newExtra = {
 						type: "sign",
-						name: "default", // можно добавить UI позже
-						function: "warn",
-						radius: 1,
+						name: "Стоп",
+						function: "",
+						radius: 10,
 						position: { x, y },
 					}
 					break
@@ -310,13 +282,11 @@
 				marker.position.set(pos.x * textureSize * 0.5, pos.y * textureSize * 0.5)
 			}
 
-			if (mode.value.extraType === "sign") {
-				marker.eventMode = "static"
-				marker.cursor = "pointer"
-				marker.on("pointertap", () => {
-					editExtra.value = newExtra as Extra
-				})
-			}
+			marker.eventMode = "static"
+			marker.cursor = "pointer"
+			marker.on("pointertap", () => {
+				editExtra.value = newExtra as Extra
+			})
 			extrasLayer.addChild(marker)
 		}
 	}
@@ -616,5 +586,16 @@
 
 	button:active {
 		transform: scale(0.95);
+	}
+
+	.edit-extra-button {
+		margin-top: 0.5rem;
+	}
+
+	.edit-extra-button button {
+		background: #f0f0f0;
+		border: 1px solid #ccc;
+		padding: 5px 10px;
+		cursor: pointer;
 	}
 </style>
