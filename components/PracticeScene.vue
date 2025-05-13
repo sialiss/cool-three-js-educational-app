@@ -86,7 +86,7 @@
 		})
 
 		const loader = new GLTFLoader()
-		loader.load("../models/Car3_2.glb?url", gltf => {
+		loader.load("../models/Car3_3.glb?url", gltf => {
 			car = gltf.scene
 			car.scale.set(0.5, 0.5, 0.5)
 			const width = levelData.value?.size.x || 0
@@ -99,6 +99,9 @@
 			wheels.Wheel3 = car.getObjectByName("Wheel3")!
 			wheels.Wheel4 = car.getObjectByName("Wheel4")!
 			steeringWheel = car.getObjectByName("Steer")!
+
+			// const steeringWheelHelper = new THREE.AxesHelper(10)
+			// steeringWheel.add(steeringWheelHelper)
 
 			animate()
 		})
@@ -201,7 +204,6 @@
 		}
 	}
 
-	const steeringWheelTurnSpeed = 0.5 // Скорость поворота руля, настраиваемая по желанию
 	const updateSteeringWheel = () => {
 		if (!steeringWheel) return
 
@@ -214,7 +216,57 @@
 		if (keys.d || keys.в) targetAngle = -maxSteeringAngle
 
 		// Плавное приближение текущего угла к целевому
-		steeringWheel.rotation.y += (targetAngle - steeringWheel.rotation.y) * turnSpeed
+		steeringWheel.rotation.z += (targetAngle - steeringWheel.rotation.z) * turnSpeed
+	}
+
+	let velocity = 0
+	const acceleration = 0.002
+	const deceleration = 0.001
+	const maxSpeed = 0.2
+	const rotationSpeedFactor = 0.02
+	const updateCarMovement = (car: THREE.Object3D) => {
+		const direction = new THREE.Vector3()
+		car.getWorldDirection(direction)
+
+		// Управление ускорением и замедлением
+		if (keys.w || keys.ц) {
+			velocity += acceleration
+		} else if (keys.s || keys.ы) {
+			velocity -= acceleration
+		} else {
+			if (velocity > 0 && velocity >= deceleration) velocity -= deceleration
+			if (velocity < 0 && velocity <= deceleration) velocity += deceleration
+			if (Math.abs(velocity) < deceleration) velocity = 0
+		}
+
+		velocity = Math.max(-maxSpeed, Math.min(maxSpeed, velocity))
+
+		// Поворот зависит от направления движения
+		if (keys.a || keys.ф) {
+			car.rotation.y += rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+		}
+		if (keys.d || keys.в) {
+			car.rotation.y -= rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+		}
+
+		// Перемещение
+		const movement = direction.clone().multiplyScalar(velocity)
+		car.position.add(movement)
+
+		// Вращение колёс
+		Object.values(wheels).forEach(wheel => {
+			wheel.rotateX(-velocity * 10)
+		})
+
+		// Поворот передних колёс визуально
+		const maxSteerAngle = Math.PI / 6
+		const steerReturnSpeed = 0.05
+		let targetSteerAngle = 0
+		if (keys.a || keys.ф) targetSteerAngle = maxSteerAngle
+		if (keys.d || keys.в) targetSteerAngle = -maxSteerAngle
+
+		wheels.Wheel1.rotation.y += (targetSteerAngle - wheels.Wheel1.rotation.y) * steerReturnSpeed
+		wheels.Wheel2.rotation.y += (targetSteerAngle - wheels.Wheel2.rotation.y) * steerReturnSpeed
 	}
 
 	let lastFrameTime = 0
@@ -224,40 +276,11 @@
 		requestAnimationFrame(animate)
 		if (time - lastFrameTime < frameDuration) return
 		lastFrameTime = time
-		const speed = 0.1
-		const rotationSpeed = 0.03
-		const maxSteerAngle = Math.PI / 6 // Максимальный угол поворота передних колёс (30°)
-		const steerReturnSpeed = 0.05 // Скорость возвращения колёс в центр
 
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
 
-		if (keys.w || keys.ц) {
-			car.position.addScaledVector(direction, speed)
-		}
-		if (keys.s || keys.ы) {
-			car.position.addScaledVector(direction, -speed)
-		}
-		if (keys.a || keys.ф) {
-			car.rotation.y += rotationSpeed
-		}
-		if (keys.d || keys.в) {
-			car.rotation.y -= rotationSpeed
-		}
-
-		// Вращение колёс (вперёд-назад)
-		const rollingDirection = keys.w || keys.ц ? 1 : keys.s || keys.ы ? -1 : 0
-		Object.values(wheels).forEach(wheel => {
-			wheel.rotateX(-0.1 * rollingDirection)
-		})
-
-		// Поворот передних колёс влево/вправо с плавным возвращением в центр
-		let targetSteerAngle = 0
-		if (keys.a || keys.ф) targetSteerAngle = maxSteerAngle
-		if (keys.d || keys.в) targetSteerAngle = -maxSteerAngle
-
-		wheels.Wheel1.rotation.y += (targetSteerAngle - wheels.Wheel1.rotation.y) * steerReturnSpeed
-		wheels.Wheel2.rotation.y += (targetSteerAngle - wheels.Wheel2.rotation.y) * steerReturnSpeed
+		updateCarMovement(car)
 
 		// Центрируем камеру на машине
 		if (isFirstPerson) {
