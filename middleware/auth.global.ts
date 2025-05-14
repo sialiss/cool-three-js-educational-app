@@ -2,9 +2,6 @@ import { useAuth } from "@/composables/useAuth"
 
 export default defineNuxtRouteMiddleware((to: { path: string }, from: { path: string }) => {
 	const { isAuthenticated, getRole } = useAuth()
-    console.log("переадресация")
-    console.log(isAuthenticated.value)
-    console.log(getRole())
 
 	// Если пользователь не авторизован и пытается зайти на защищенную страницу
 	if (!isAuthenticated.value && to.path !== "/login") {

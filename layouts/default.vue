@@ -13,6 +13,5 @@
 	.main {
 		display: grid;
 		grid-template-rows: auto 1fr;
-		height: 100vh;
 	}
 </style>
