@@ -19,8 +19,9 @@
 	--color-light-l: #fdfeff;
 	--color-light-m: #ebf7ff;
 	--color-light-s: #76bcf4;
-	--color-dark-s: #4082af;
-	--color-dark-m: #4b6d7e;
+	--color-dark-s: #6c63ff;
+    --color-dark-s-blue: #007bff;
+	--color-dark-m: #0056b3;
 	--color-dark-l: #001622;
 	--color-dark-xl: #000000;
 }

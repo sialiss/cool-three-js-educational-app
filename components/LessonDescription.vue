@@ -84,12 +84,12 @@
 
 	/* Основная кнопка */
 	button.primary {
-		background-color: #007bff;
+		background-color: var(--color-dark-s-blue);
 		color: white;
 	}
 
 	button.primary:hover {
-		background-color: #0056b3;
+		background-color: var(--color-dark-m);
 	}
 
 	/* Второстепенная кнопка */

@@ -231,91 +231,126 @@
 
 <style scoped>
 	.lesson-page {
-		margin: auto;
-		padding: 20px;
-	}
-	.lesson-text {
-		margin: auto;
+		margin: 0 auto;
+		padding: var(--pad-l) var(--pad-xl);
 		display: flex;
 		flex-direction: column;
-		white-space: pre-line;
-		gap: 0rem;
+		gap: var(--pad-m);
 	}
+
+	.lesson-page h1 {
+		text-align: center;
+		font-size: 2rem;
+		color: var(--text-main, #222);
+	}
+
+	.lesson-text {
+		display: flex;
+		flex-direction: column;
+		gap: var(--pad-m);
+		line-height: 1.6;
+		font-size: 1.1rem;
+	}
+
 	.buttons {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: center;
-		margin: auto 15% auto 15%;
-		gap: 3rem;
+		gap: var(--pad-m);
 	}
+
 	button {
-		margin-top: 1rem;
-		padding: 12px;
-		background: #007bff;
+		padding: 12px 20px;
+		background-color: var(--color-dark-s-blue);
 		color: white;
 		border: none;
+		border-radius: 8px;
+		font-size: 1rem;
 		cursor: pointer;
-		border-radius: 5px;
-		cursor: pointer;
+		transition: background-color 0.5s ease;
 	}
+
 	button:hover {
-		background: #0056b3;
+		background-color: var(--color-dark-m);
+	}
+
+	button.secondary {
+		background-color: #e0e0e0;
+		color: #333;
+	}
+
+	button.secondary:hover {
+		background-color: #ccc;
+	}
+
+	button[style*="darkgreen"] {
+		background-color: darkgreen !important;
 	}
 
 	.admin-actions {
-		margin-top: 2rem;
 		display: flex;
-		gap: 1rem;
 		justify-content: center;
+		flex-wrap: wrap;
+		gap: var(--pad-m);
+		margin-top: 1rem;
 	}
 
 	.edit,
 	.delete {
-		background-color: #99ff80;
-		color: #000;
+		color: #fff;
 	}
+
+	.edit {
+		background-color: #28a745;
+	}
+
 	.delete {
 		background-color: #dc3545;
-		color: #fff;
 	}
 
 	.edit-input,
 	.edit-textarea {
 		width: 100%;
 		padding: 10px;
-		margin-top: 10px;
 		font-family: inherit;
 		font-size: 1rem;
 		border: 1px solid #ccc;
 		border-radius: 5px;
 		resize: vertical;
 	}
+
 	.edit-textarea.description {
-		margin-top: 10px;
 		min-height: 60px;
 	}
+
 	.edit-textarea.content {
 		height: 15rem;
 	}
+
 	.bb-toolbar {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
+		margin-top: 1rem;
 		margin-bottom: 0.5rem;
 	}
 
 	.bb-toolbar button {
-		padding: 5px 10px;
-		border: none;
-		background: #3228bd;
-		cursor: pointer;
+		padding: 6px 12px;
+		background-color: var(--color-dark-s);
+		color: white;
 		border-radius: 5px;
+		border: none;
+		cursor: pointer;
+		transition: background-color 0.2s ease;
 	}
 
 	.bb-toolbar button:hover {
-		background: #ccc;
+		background-color: #777;
 	}
 
 	.lesson-preview {
-		background: #f5f5f5;
+		background-color: #f5f5f5;
 		padding: 1rem;
 		border-radius: 5px;
 		margin-top: 1rem;
@@ -329,7 +364,7 @@
 	}
 
 	blockquote {
-		border-left: 4px solid #007bff;
+		border-left: 4px solid var(--color-dark-s);
 		padding-left: 1rem;
 		font-style: italic;
 		background-color: #f9f9f9;
