@@ -1,9 +1,8 @@
 <template>
 	<div class="dashboard">
-		<h1 class="title">Панель администратора</h1>
 
 		<div class="top-controls">
-			<h2 class="subtitle">Список пользователей</h2>
+			<h2>Список пользователей</h2>
 			<button class="create-btn" @click="creating = !creating">
 				{{ creating ? "Отмена" : "Создать пользователя" }}
 			</button>
@@ -31,12 +30,12 @@
 
 			<!-- Список пользователей и детали -->
 			<template v-else>
-				<ul class="user-list">
+				<ul class="item-list user-list">
 					<li
 						v-for="user in users"
 						:key="user.id"
 						@click="selectUser(user)"
-						:class="{ admin: user.role === 'admin' }"
+						:class="{ admin: user.role === 'admin', selected: user === selectedUser }"
 					>
 						<span>{{ user.surname }} {{ user.name }} ({{ user.login }})</span>
 						<span v-if="user.role === 'admin'" class="status">👑</span>
@@ -117,16 +116,7 @@
 	.dashboard {
 		width: 100%;
 		height: 100%;
-		margin: auto;
 		padding: 20px;
-		border-radius: 10px;
-		background: #f8f9fa;
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	}
-	.title,
-	.subtitle {
-		text-align: center;
-		color: #333;
 	}
 	.top-controls {
 		display: flex;
@@ -135,13 +125,9 @@
 		margin-bottom: 1rem;
 	}
 	.create-btn {
-		background: #4caf50;
+		background: #28a745;
 		color: white;
-		border: none;
 		padding: 8px 12px;
-		border-radius: 5px;
-		cursor: pointer;
-		font-weight: bold;
 	}
 	.create-btn:hover {
 		background: #45a049;
@@ -155,29 +141,6 @@
 		display: grid;
 		grid-template-columns: 1.5fr 1fr;
 		gap: 1rem;
-	}
-	.user-list {
-		margin: 0;
-		list-style: none;
-		padding: 0;
-	}
-	.user-list li {
-		padding: 10px;
-		cursor: pointer;
-		border-bottom: 1px solid #ddd;
-		display: flex;
-		justify-content: space-between;
-		background: #fff;
-		border-radius: 5px;
-		margin-bottom: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-	.user-list li:hover {
-		background: #c2e2ca;
-	}
-	.user-list .admin {
-		background: #d4edda;
-		font-weight: bold;
 	}
 	.create-user-form {
 		grid-column: span 2;

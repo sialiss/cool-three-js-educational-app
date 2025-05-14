@@ -4,7 +4,9 @@
 
 		<div v-if="!isEditing">
 			<p><strong>ID:</strong> {{ user.id }}</p>
-			<p><strong>Имя:</strong> {{ userData.name }}</p>
+			<p><strong>ФИО:</strong> {{ userData.surname + " " + userData.name + " " + userData.patronymic }}</p>
+            <p><strong>Телефон:</strong> {{ userData.phone }}</p>
+            <p><strong>email:</strong> {{ userData.email }}</p>
 			<p><strong>Логин:</strong> {{ userData.login }}</p>
 			<p><strong>Роль:</strong> {{ userData.role }}</p>
 
@@ -111,18 +113,9 @@
 	}
 	.buttons {
 		display: flex;
+		justify-content: center;
 		gap: 10px;
 		margin-top: 15px;
-	}
-	.edit-btn,
-	.save-btn,
-	.cancel-btn,
-	.delete-btn {
-		padding: 6px 12px;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: bold;
 	}
 	.edit-btn {
 		background-color: #3498db;

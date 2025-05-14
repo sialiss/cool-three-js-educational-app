@@ -1,21 +1,21 @@
 <template>
 	<div class="dashboard">
 		<div v-if="getRole() == 'user'">
-			<h1 class="title">Прогресс обучения</h1>
+			<h2 class="text-center">Прогресс обучения</h2>
 			<div class="progress-bar">
 				<div class="progress" :style="{ width: progress + '%' }"></div>
 			</div>
 			<p class="progress-text">{{ progress }}% завершено</p>
 		</div>
 
-		<h2 class="subtitle">Список уроков</h2>
+		<h2 class="text-center pad-top-m">Список уроков</h2>
 		<div class="lessons">
-			<ul class="lesson-list">
+			<ul class="item-list lesson-list">
 				<li
 					v-for="lesson in lessons"
 					:key="lesson.id"
 					@click="selectLesson(lesson)"
-					:class="{ completed: lesson.completed }"
+					:class="{ completed: lesson.completed, selected: lesson === selectedLesson }"
 				>
 					<span>{{ lesson.title }}</span>
 					<span v-if="lesson.completed" class="status">✓</span>
@@ -78,20 +78,16 @@
 </script>
 
 <style scoped>
+    .pad-top-m {
+        padding-top: var(--pad-m);
+    }
+    
 	.dashboard {
 		width: 100%;
 		height: 100%;
-		margin: auto;
-		padding: 20px;
-		border-radius: 10px;
-		background: #f8f9fa;
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		padding: 0 1rem 1rem 1rem;
 	}
-	.title,
-	.subtitle {
-		text-align: center;
-		color: #333;
-	}
+
 	.progress-bar {
 		height: 10px;
 		background: #ddd;
@@ -115,33 +111,5 @@
 		display: grid;
 		grid-template-columns: 1.5fr 1fr;
 		gap: 1rem;
-	}
-	.lesson-list {
-		list-style: none;
-		padding: 0;
-	}
-	.lesson-list li {
-		padding: 10px;
-		cursor: pointer;
-		border-bottom: 1px solid #ddd;
-		display: flex;
-		justify-content: space-between;
-		padding: 10px;
-		background: #fff;
-		border-radius: 5px;
-		margin-bottom: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-	.lesson-list li:hover {
-		background: #c2e2ca;
-	}
-	.lesson-list .completed {
-		background: #d4edda;
-		color: green;
-		font-weight: bold;
-	}
-	.status {
-		color: #28a745;
-		font-weight: bold;
 	}
 </style>

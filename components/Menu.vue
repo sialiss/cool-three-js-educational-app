@@ -10,7 +10,7 @@
 			<NuxtLink v-if="!isAuthenticated" to="/login" exact-active-class="active">Войти</NuxtLink>
 			<NuxtLink v-if="isAuthenticated" to="/logout" exact-active-class="active">Выйти</NuxtLink>
 		</div>
-		<nav class="navbar">
+		<nav class="navbar pad-m">
 			<ul>
 				<li>
 					<NuxtLink to="/" exact-active-class="active">Главная</NuxtLink>
@@ -36,14 +36,16 @@
 		left: 0;
 		display: grid;
 		width: 100%;
-		background-color: #333;
-		padding: 1rem;
+		background-color: var(--color-light-l);
+		padding: 1rem 1rem 0 1rem;
 	}
 
 	.minimenu .navbar {
 		display: flex;
 		width: 100%;
 		justify-self: center;
+		border-top: 2px solid var(--color-dark-l);
+		border-bottom: 2px solid var(--color-dark-l);
 	}
 
 	.minimenu ul {
@@ -53,7 +55,7 @@
 		margin: 0;
 		padding: 0;
 		display: flex;
-		justify-content: space-around;
+		justify-content: space-evenly;
 		align-items: center;
 	}
 
@@ -64,17 +66,17 @@
 
 	.minimenu a {
 		text-decoration: none;
-		color: white;
+		color: var(--color-dark-l);
 		transition: color 0.3s;
 	}
 
 	.minimenu a:hover {
-		color: #00ff00;
+		color: var(--color-primary-dark);
 	}
 
 	.minimenu a.active {
-		color: #00ff00;
-		font-weight: bold;
+		color: var(--color-dark-l);
+		font-weight: 600;
 	}
 
 	.account {

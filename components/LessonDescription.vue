@@ -1,5 +1,5 @@
 <template>
-	<div class="lesson-detail">
+	<div class="lesson-detail pad-l">
 		<h2>{{ lesson.title }}</h2>
 		<p>{{ lesson.description }}</p>
 		<div class="button-group">

@@ -12,8 +12,16 @@
 					</option>
 				</select>
 
-				<label>Функция (JS-условие):</label>
-				<input v-model="extra.function" placeholder="например: car.speed > 30" />
+				<template v-if="extra.name === 'Ограничение скорости'">
+					<label>Ограничение (км/ч):</label>
+					<select v-model.number="speedLimit">
+						<option v-for="value in speedOptions" :key="value" :value="value">{{ value }} км/ч</option>
+					</select>
+				</template>
+				<template v-else>
+					<label>Функция (JS-условие):</label>
+					<input v-model="extra.function" placeholder="например: car.speed > 30" />
+				</template>
 
 				<label>Радиус:</label>
 				<input type="number" v-model.number="extra.radius" />
@@ -40,6 +48,7 @@
 	const props = defineProps<{
 		extra: Extra
 	}>()
+	const { extra } = toRefs(props)
 
 	const signs = [
 		{ name: "Стоп", function: "🛑" },
@@ -53,6 +62,8 @@
 		{ name: "Дети", function: "🚸👶" },
 		{ name: "Дорожные работы", function: "🚧" },
 	]
+	const speedOptions = [20, 30, 40, 50, 60, 70, 80, 90, 100]
+	const speedLimit = ref(60)
 
 	const emit = defineEmits(["close"])
 
@@ -66,6 +77,28 @@
 				return "переход"
 		}
 	}
+
+	watch(speedLimit, value => {
+		if (extra.value.type === "sign" && extra.value.name === "Ограничение скорости") {
+			extra.value.function = `car.speed > ${speedLimit.value}`
+		}
+	})
+
+	watch(
+		() => (extra.value.type === "sign" ? extra.value.name : null),
+		name => {
+			if (extra.value.type !== "sign") return
+
+			if (name === "Ограничение скорости") {
+				speedLimit.value = 60
+				extra.value.function = `car.speed > 60`
+			} else if (name === "Стоп") {
+				extra.value.function = "stop"
+			} else {
+				extra.value.function = ""
+			}
+		}
+	)
 </script>
 
 <style scoped>
