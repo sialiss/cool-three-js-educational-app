@@ -101,7 +101,7 @@
 
 	.intro {
 		font-size: 1.2rem;
-		color: var(--color-dark-m);
+		color: var(--color-dark-l);
 		max-width: 600px;
 		text-align: center;
 		margin: 0 auto;
@@ -173,7 +173,6 @@
 		background: var(--color-light-m);
 		border-radius: 16px;
 		padding: var(--pad-xl);
-		margin-bottom: var(--pad-xl);
 	}
 
 	.contact-info {

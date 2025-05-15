@@ -1,14 +1,22 @@
 <script setup>
 	import { useAuth } from "@/composables/useAuth" // Файл кастомного хука
+	import { useRouter } from "vue-router"
 
-	const { isAuthenticated, getRole } = useAuth()
+	const { logout, isAuthenticated, getRole } = useAuth()
+	const router = useRouter()
+
+	const handleLogout = async () => {
+		logout()
+		await router.push({ path: "/login", query: { loggedOut: "true" } })
+	}
 </script>
 
 <template>
 	<div class="minimenu">
 		<div class="account">
-			<NuxtLink v-if="!isAuthenticated" to="/login" exact-active-class="active">Войти</NuxtLink>
-			<NuxtLink v-if="isAuthenticated" to="/logout" exact-active-class="active">Выйти</NuxtLink>
+			<NuxtLink v-if="!isAuthenticated" to="/login">Войти</NuxtLink>
+			<!-- <NuxtLink v-if="isAuthenticated" :to="{ path: '/login', query: { loggedOut: true } }">Выйти</NuxtLink> -->
+			<a v-if="isAuthenticated" href="#" @click.prevent="handleLogout">Выйти</a>
 		</div>
 		<nav class="navbar pad-m">
 			<ul>
@@ -77,6 +85,8 @@
 	.minimenu a.active {
 		color: var(--color-dark-l);
 		font-weight: 600;
+		border-bottom: 3px solid var(--color-dark-l); /* Толстая линия */
+		padding-bottom: 2px; /* Немного отступа, чтобы не прилипало к тексту */
 	}
 
 	.account {

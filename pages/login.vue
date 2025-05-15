@@ -1,12 +1,12 @@
 <template>
-	<div class="container">
-		<div class="form-box">
+	<div class="login-page">
+		<div class="login-card">
 			<h2 class="title">Вход в аккаунт</h2>
 
 			<form @submit.prevent="handleLogin" class="form">
 				<div class="input-group">
 					<label for="login">Логин</label>
-					<input id="login" v-model="login_input" type="text" required autocomplete="username">
+					<input id="login" v-model="login_input" type="text" required autocomplete="username" />
 				</div>
 
 				<div class="input-group">
@@ -14,7 +14,7 @@
 					<input id="password" v-model="password" type="password" required />
 				</div>
 
-				<button type="submit" :disabled="loading" class="submit-btn">
+				<button type="submit" :disabled="loading" class="primary-btn">
 					<span v-if="!loading">Войти</span>
 					<span v-else class="loading">
 						<svg class="spinner" viewBox="0 0 24 24">
@@ -26,28 +26,37 @@
 				</button>
 
 				<div class="links">
-					<a href="/forgot-password" class="forgot-password">Забыли пароль?</a>
-					<a href="/register" class="create-account">Создать аккаунт</a>
+					<a href="/forgot-password">Забыли пароль?</a>
 				</div>
 			</form>
+		</div>
+
+		<!-- Модальное окно -->
+		<div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+			<div class="modal-content">
+				<p>Вы вышли из аккаунта</p>
+				<button class="close-btn" @click="closeModal">Закрыть</button>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-	import { ref } from "vue"
-	import { useRouter } from "vue-router"
+	import { ref, watch } from "vue"
+	import { useRouter, useRoute } from "vue-router"
 	import { useAuth } from "@/composables/useAuth"
+
+	const route = useRoute()
+	const router = useRouter()
+	const { login, logout } = useAuth()
 
 	const login_input = ref("")
 	const password = ref("")
 	const loading = ref(false)
-	const router = useRouter()
-	const { login } = useAuth()
+	const showModal = ref(false)
 
 	const handleLogin = async () => {
 		loading.value = true
-
 		try {
 			await login(login_input.value, password.value)
 			router.push("/dashboard")
@@ -57,93 +66,95 @@
 			loading.value = false
 		}
 	}
+
+	// Показать модалку при ?loggedOut=true
+	if (route.query.loggedOut === "true") {
+		showModal.value = true
+	}
+
+	const closeModal = () => {
+		showModal.value = false
+	}
 </script>
 
 <style scoped>
-	.container {
+	.login-page {
 		display: flex;
-		width: 100%;
-		height: 100%;
 		justify-content: center;
 		align-items: center;
-		background-color: #f3f4f6;
+		height: 85vh;
 	}
 
-	/* Форма */
-	.form-box {
+	.login-card {
+		background: white;
+		padding: 2rem;
+		border-radius: 1rem;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 		width: 100%;
-		max-width: 380px;
-		background: #fff;
-		padding: 30px;
-		border: 1px solid #ddd;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		max-width: 400px;
 	}
 
-	/* Заголовок */
 	.title {
 		text-align: center;
-		font-size: 1.4rem;
-		font-weight: bold;
-		color: #333;
-		margin-bottom: 20px;
+		font-size: 1.6rem;
+		margin-bottom: 1rem;
+		color: #1f2937;
 	}
 
-	/* Поля ввода */
 	.input-group {
-		margin-bottom: 15px;
+		margin-bottom: 1rem;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.input-group label {
-		display: block;
-		font-size: 0.9rem;
-		color: #555;
-		margin-bottom: 5px;
+		margin-bottom: 0.5rem;
+		color: #374151;
+		font-size: 0.95rem;
 	}
 
 	.input-group input {
-		width: 100%;
 		padding: 10px;
-		border: 1px solid #bbb;
+		border: 1px solid #d1d5db;
+		border-radius: 0.5rem;
 		font-size: 1rem;
-		transition: border-color 0.2s;
 	}
 
 	.input-group input:focus {
-		border-color: #007bff;
+		border-color: #3b82f6;
 		outline: none;
 	}
 
-	/* Кнопка входа */
-	.submit-btn {
+	.primary-btn {
 		width: 100%;
-		padding: 10px;
+		padding: 12px;
 		background: #007bff;
 		color: white;
-		font-size: 1rem;
 		border: none;
+		border-radius: 0.5rem;
+		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
+		transition: background 0.2s ease;
 	}
 
-	.submit-btn:hover {
+	.primary-btn:hover {
 		background: #0056b3;
 	}
 
-	.submit-btn:disabled {
-		background: #a0aec0;
+	.primary-btn:disabled {
+		background: #9ca3af;
 		cursor: not-allowed;
 	}
 
-	/* Дополнительные ссылки */
 	.links {
+		margin-top: 1rem;
 		display: flex;
 		justify-content: space-between;
-		margin-top: 15px;
 		font-size: 0.9rem;
 	}
 
 	.links a {
-		color: #007bff;
+		color: #3b82f6;
 		text-decoration: none;
 	}
 
@@ -151,7 +162,6 @@
 		text-decoration: underline;
 	}
 
-	/* Индикатор загрузки */
 	.loading {
 		display: flex;
 		align-items: center;
@@ -177,7 +187,44 @@
 		opacity: 0.75;
 	}
 
-	/* Анимация */
+	/* Модалка */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+	}
+
+	.modal-content {
+		background: white;
+		padding: 1.5rem 2rem;
+		border-radius: 1rem;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		text-align: center;
+		min-width: 300px;
+		font-size: 1.1rem;
+		color: #111;
+		position: relative;
+	}
+
+	.close-btn {
+		margin-top: 1rem;
+		padding: 8px 16px;
+		background: #007bff;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+
+	.close-btn:hover {
+		background: #0056b3;
+	}
+
 	@keyframes spin {
 		100% {
 			transform: rotate(360deg);

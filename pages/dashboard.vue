@@ -1,7 +1,7 @@
 <template>
 	<div class="dashboard">
 		<div v-if="getRole() == 'user'">
-			<h2 class="text-center">Прогресс обучения</h2>
+			<h2 class="text-center pad-top-m">Прогресс обучения</h2>
 			<div class="progress-bar">
 				<div class="progress" :style="{ width: progress + '%' }"></div>
 			</div>

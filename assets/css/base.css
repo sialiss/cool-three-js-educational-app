@@ -13,14 +13,14 @@
 	--pad-xl: 4rem;
 	--color-primary: #00c500;
 	--color-primary-light: #2eca2e;
-    --color-buttons: #28a745;
+	--color-buttons: #28a745;
 	--color-primary-dark: green;
 	--color-light-xl: #ffffff;
 	--color-light-l: #fdfeff;
 	--color-light-m: #ebf7ff;
 	--color-light-s: #76bcf4;
 	--color-dark-s: #6c63ff;
-    --color-dark-s-blue: #007bff;
+	--color-dark-s-blue: #007bff;
 	--color-dark-m: #0056b3;
 	--color-dark-l: #001622;
 	--color-dark-xl: #000000;
@@ -103,12 +103,12 @@ html {
 }
 
 button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s ease;
+	padding: 10px 20px;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 16px;
+	transition: all 0.3s ease;
 }
 
 img {
@@ -171,17 +171,23 @@ h3 {
 }
 
 .item-list li.selected {
-    transform: scale(1.01);
+	transform: scale(1.01);
 	font-weight: 600;
 }
 
 .item-list li.completed {
-	background: #e5f6e9;
+	/* background: #e5f6e9; */
 	color: var(--color-primary-dark);
+	border: 1px solid var(--color-primary-dark);
 	font-weight: 600;
 }
 
 .status {
 	color: green;
 	font-weight: bold;
+}
+
+strong {
+	font: inherit;
+	font-weight: revert;
 }

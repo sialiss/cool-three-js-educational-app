@@ -10,8 +10,9 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@bbob/core": "^4.2.0",
+    "@bbob/preset-html5": "^4.2.0",
     "@types/three": "^0.172.0",
-    "bbcode": "^0.1.5",
     "cannon-es": "^0.20.0",
     "nuxt": "^3.15.3",
     "pixi.js": "^8.9.2",

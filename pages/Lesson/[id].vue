@@ -62,7 +62,8 @@
 	import { ref, onMounted, computed } from "vue"
 	import { useRoute, useRouter } from "vue-router"
 	import { useAuth } from "@/composables/useAuth"
-	import bbcode from "bbcode"
+	import bbobHTML from "@bbob/html"
+	import presetHTML5 from "@bbob/preset-html5"
 
 	const { getRole, toggleComplete } = useAuth()
 
@@ -83,7 +84,6 @@
 
 			lessons = await res.json()
 			lesson.value = lessons.find(l => l.id === Number(route.params.id))
-			console.log(lesson)
 			if (lesson.value?.content) {
 				lessonContent.value = lesson.value.content
 			}
@@ -94,7 +94,8 @@
 
 	const formattedLesson = computed(() => {
 		if (lesson.value) {
-			return bbcode.parse(lesson.value.content)
+			const processed = bbobHTML(lesson.value.content, presetHTML5())
+			return processed
 		}
 		return ""
 	})
@@ -207,7 +208,8 @@
 	const lessonContent = ref("")
 
 	const renderedContent = computed(() => {
-		return bbcode.parse(lessonContent.value)
+		const processed = bbobHTML(lessonContent.value, presetHTML5())
+		return processed
 	})
 
 	const textarea = ref(null)
