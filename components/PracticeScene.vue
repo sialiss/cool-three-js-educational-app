@@ -34,6 +34,7 @@
 		road_with_wide_dashes: import("../assets/images/road_with_wide_dashes.png"),
 		road_with_dashes: import("../assets/images/road_with_dashes.png"),
 		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
+		crosswalk: import("../assets/images/crosswalk.png")
 	}
 	const texturePromises = Object.fromEntries(
 		Object.entries(textureUrls).map(([key, path]) => [key, path.then(module => textureLoader.load(module.default))])
@@ -113,6 +114,7 @@
 		{ name: "coolhouse", path: "../models/coolhouse.glb?url" },
 		{ name: "whitehouse", path: "../models/whitehouse.glb?url" },
 		{ name: "pinkhouse", path: "../models/pinkhouse.glb?url" },
+		{ name: "trafficlight", path: "../models/trafficlight.glb?url" }
 	]
 
 	const loadModels = async () => {
@@ -179,7 +181,6 @@
 			map[key] = textures[i]
 			return map
 		}, {} as Record<string, THREE.Texture>)
-
 		// Построение поля с расширением по 3 тайла с каждой стороны
 		const grassTile: Tile = { type: "grass", angle: 0 }
 
@@ -273,6 +274,43 @@
 				scene,
 				models
 			)
+		}
+	}
+
+	const drawExtras = async (extras: any[], scene: THREE.Scene) => {
+		const tileSize = 4
+		const texture = await texturePromises.crosswalk
+		const loader = new GLTFLoader()
+
+		for (const extra of extras) {
+			const { type, position } = extra
+			const px = position.x * tileSize
+			const pz = position.y * tileSize
+
+			if (type === "crosswalk") {
+				const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true })
+				const geometry = new THREE.PlaneGeometry(tileSize, tileSize)
+				const mesh = new THREE.Mesh(geometry, material)
+				mesh.rotation.x = -Math.PI / 2
+				mesh.position.set(pz, 0.015, px)
+				scene.add(mesh)
+			} else if (type === "trafficlight") {
+				await new Promise<void>((resolve, reject) => {
+					loader.load(
+						"../models/trafficlight.glb?url",
+						gltf => {
+							const light = gltf.scene
+							light.scale.set(3, 3, 3)
+							// позиционируем в ЛЕВЫЙ ВЕРХНИЙ угол тайла
+							light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
+							scene.add(light)
+							resolve()
+						},
+						undefined,
+						reject
+					)
+				})
+			}
 		}
 	}
 
@@ -430,6 +468,9 @@
 		if (levelData.value) {
 			init()
 			await drawField(levelData.value.size, levelData.value.field, scene, true, true)
+			if (levelData.value.extras) {
+				await drawExtras(levelData.value.extras, scene)
+			}
 		}
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)

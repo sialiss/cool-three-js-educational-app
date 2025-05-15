@@ -108,6 +108,16 @@
 				</div>
 			</div>
 		</div>
+		<div v-if="showReplaceModal" class="modal-overlay">
+			<div class="modal">
+				<h3>Практика уже существует</h3>
+				<p>Для этого урока уже создан уровень. Заменить существующий?</p>
+				<div class="modal-buttons">
+					<button @click="replaceLevel">Заменить</button>
+					<button @click="showReplaceModal = null">Отмена</button>
+				</div>
+			</div>
+		</div>
 		<ExtraEditor v-if="editExtra" :extra="editExtra" @close="editExtra = null" />
 	</div>
 </template>
@@ -124,6 +134,7 @@
 	const lessons = ref<{ id: number; title: string }[]>([])
 	const selectedLessonId = ref("")
 	const showModal = ref(false)
+	const showReplaceModal = ref(null)
 	const newLessonTitle = ref("")
 	const newLessonDescription = ref("")
 
@@ -279,6 +290,11 @@
 					}
 					break
 			}
+			const existingIndex = level.extras.findIndex(e => e.position.x === x && e.position.y === y)
+			if (existingIndex !== -1) {
+				level.extras.splice(existingIndex, 1)
+				extrasLayer.removeChildAt(existingIndex)
+			}
 			level.extras.push(newExtra)
 
 			// визуализация
@@ -350,11 +366,44 @@
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(levelToSave),
 			})
-			if (!res.ok) throw new Error(`Ошибка: ${res.statusText}`)
+			const data = await res.json()
+			if (!res.ok && !data.alreadyExists) throw new Error(`Ошибка: ${res.statusText}`)
+			else if (data.alreadyExists) {
+				showReplaceModal.value = data.existingLessonId
+				return
+			}
 			alert("Уровень успешно сохранён!")
 		} catch (err) {
 			console.error("Ошибка при сохранении:", err)
 			alert("Не удалось сохранить уровень.")
+		}
+	}
+
+	async function replaceLevel() {
+		const goalScoreInput = document.getElementById("goal-score") as HTMLInputElement
+		const levelToSave: Level = {
+			...level,
+			field: tiles.value,
+			goal: {
+				score: parseInt(goalScoreInput.value || "0"),
+			},
+			extras: level.extras,
+			lessonId: Number(selectedLessonId.value),
+		}
+
+		try {
+			const res = await fetch(`http://localhost:8000/practice-lessons/${showReplaceModal.value}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(levelToSave),
+			})
+            console.log(res)
+			if (!res.ok) throw new Error("Ошибка при замене")
+			alert("Уровень успешно обновлён!")
+			showReplaceModal.value = null
+		} catch (err) {
+			console.error("Ошибка при замене:", err)
+			alert("Не удалось обновить уровень.")
 		}
 	}
 
