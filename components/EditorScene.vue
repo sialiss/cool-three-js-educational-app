@@ -147,6 +147,9 @@
 		road_with_dashes: import("../assets/images/road_with_dashes.png"),
 		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
 	}
+	const extraTextureUrls = {
+		crosswalk: import("../assets/images/crosswalk.png"),
+	}
 	const textures: Record<string, Texture> = {}
 	const slots = new Map<Sprite, Point>()
 
@@ -181,7 +184,13 @@
 			textures[name] = await Assets.load(mod.default)
 		})
 
-		await Promise.all(texturePromises)
+		const extraTexturePromises = Object.entries(extraTextureUrls).map(async ([name, importThing]) => {
+			const mod = await importThing
+			// extraLoadedUrls[name] = mod.default // путь к картинке
+			textures[name] = await Assets.load(mod.default)
+		})
+
+		await Promise.all([...texturePromises, ...extraTexturePromises])
 
 		// center.set(app.canvas.width / 2, app.canvas.height / 2)
 		app.canvas.style.touchAction = "auto"
@@ -272,21 +281,35 @@
 			}
 			level.extras.push(newExtra)
 
-			// Примитивная визуализация
-			const marker = new Sprite(Texture.WHITE)
-			marker.tint = mode.value.extraType != "trafficlight" ? 0xffffff : 0xff0000
-			marker.width = mode.value.extraType === "crosswalk" ? textureSize * 0.5 : 5
-			marker.height = mode.value.extraType === "crosswalk" ? textureSize * 0.5 : 5
+			// визуализация
+			let marker: Sprite
 			const pos = slots.get(slot)
-			if (pos) {
-				marker.position.set(pos.x * textureSize * 0.5, pos.y * textureSize * 0.5)
+			if (mode.value.extraType === "crosswalk") {
+				marker = new Sprite(textures["crosswalk"])
+				marker.scale = 0.5
+				marker.anchor.set(0.5, 0.5)
+				marker.angle = slot.angle
+				if (pos) {
+					marker.position.set(
+						pos.x * textureSize * 0.5 + textureSize * 0.25,
+						pos.y * textureSize * 0.5 + textureSize * 0.25
+					)
+				}
+			} else {
+				marker = new Sprite(Texture.WHITE)
+				marker.tint = mode.value.extraType !== "trafficlight" ? 0xffffff : 0xff0000
+				marker.width = 5
+				marker.height = 5
+				if (pos) {
+					marker.position.set(pos.x * textureSize * 0.5, pos.y * textureSize * 0.5)
+				}
+				marker.eventMode = "static"
+				marker.cursor = "pointer"
+				marker.on("pointertap", () => {
+					editExtra.value = newExtra as Extra
+				})
 			}
 
-			marker.eventMode = "static"
-			marker.cursor = "pointer"
-			marker.on("pointertap", () => {
-				editExtra.value = newExtra as Extra
-			})
 			extrasLayer.addChild(marker)
 		}
 	}
