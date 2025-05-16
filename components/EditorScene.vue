@@ -275,10 +275,10 @@
 			let newExtra: Extra
 			switch (mode.value.extraType) {
 				case "trafficlight":
-					newExtra = { type: "trafficlight", position: { x, y } }
+					newExtra = { type: "trafficlight", position: { x, y }, angle: 0 }
 					break
 				case "crosswalk":
-					newExtra = { type: "crosswalk", position: { x, y } }
+					newExtra = { type: "crosswalk", position: { x, y }, angle: slot.angle }
 					break
 				case "sign":
 					newExtra = {
@@ -287,6 +287,7 @@
 						function: "",
 						radius: 10,
 						position: { x, y },
+						angle: 0,
 					}
 					break
 			}
@@ -304,7 +305,7 @@
 				marker = new Sprite(textures["crosswalk"])
 				marker.scale = 0.5
 				marker.anchor.set(0.5, 0.5)
-				marker.angle = slot.angle
+				marker.angle = newExtra.angle
 				if (pos) {
 					marker.position.set(
 						pos.x * textureSize * 0.5 + textureSize * 0.25,
@@ -316,6 +317,7 @@
 				marker.tint = mode.value.extraType !== "trafficlight" ? 0xffffff : 0xff0000
 				marker.width = 5
 				marker.height = 5
+				marker.angle = newExtra.angle
 				if (pos) {
 					marker.position.set(pos.x * textureSize * 0.5, pos.y * textureSize * 0.5)
 				}
@@ -397,7 +399,7 @@
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(levelToSave),
 			})
-            console.log(res)
+			console.log(res)
 			if (!res.ok) throw new Error("Ошибка при замене")
 			alert("Уровень успешно обновлён!")
 			showReplaceModal.value = null

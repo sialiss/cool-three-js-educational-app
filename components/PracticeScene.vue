@@ -7,7 +7,6 @@
 	import * as THREE from "three"
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
-
 	import { useRoute } from "vue-router"
 	import type { Level } from "../utils/types"
 
@@ -34,11 +33,8 @@
 		road_with_wide_dashes: import("../assets/images/road_with_wide_dashes.png"),
 		road_with_dashes: import("../assets/images/road_with_dashes.png"),
 		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
-		crosswalk: import("../assets/images/crosswalk.png")
+		crosswalk: import("../assets/images/crosswalk.png"),
 	}
-	const texturePromises = Object.fromEntries(
-		Object.entries(textureUrls).map(([key, path]) => [key, path.then(module => textureLoader.load(module.default))])
-	)
 
 	let scene: THREE.Scene
 	let camera: THREE.PerspectiveCamera
@@ -50,6 +46,11 @@
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
 	let isFirstPerson = false
+	let texturePromises: {
+		[k: string]: Promise<THREE.Texture>
+	}
+	let trafficlights: THREE.Object3D[] = []
+	let pedlights: THREE.Object3D[] = []
 
 	const init = () => {
 		scene = new THREE.Scene()
@@ -114,7 +115,7 @@
 		{ name: "coolhouse", path: "../models/coolhouse.glb?url" },
 		{ name: "whitehouse", path: "../models/whitehouse.glb?url" },
 		{ name: "pinkhouse", path: "../models/pinkhouse.glb?url" },
-		{ name: "trafficlight", path: "../models/trafficlight.glb?url" }
+		{ name: "trafficlight", path: "../models/trafficlight.glb?url" },
 	]
 
 	const loadModels = async () => {
@@ -188,7 +189,7 @@
 			for (let x = -3; x < size.x + 3; x++) {
 				let tile: Tile
 
-				// Проверяем, есть ли реальный тайл внутри границ
+				// Проверяем, есть ли реальный тайл
 				if (y >= 0 && y < size.y && x >= 0 && x < size.x) {
 					tile = field[y]?.[x] ?? grassTile
 				} else {
@@ -205,7 +206,7 @@
 				mesh.position.set(y * tileSize, 0.01, x * tileSize)
 
 				if (tile.angle) {
-					mesh.rotation.z = -THREE.MathUtils.degToRad(tile.angle)
+					mesh.rotation.z = -THREE.MathUtils.degToRad(tile.angle) - Math.PI / 2
 				}
 
 				scene.add(mesh)
@@ -294,16 +295,32 @@
 				mesh.rotation.x = -Math.PI / 2
 				mesh.position.set(pz, 0.015, px)
 				scene.add(mesh)
+				if (extra.angle) {
+					mesh.rotation.z = -THREE.MathUtils.degToRad(extra.angle) - Math.PI / 2
+				}
 			} else if (type === "trafficlight") {
 				await new Promise<void>((resolve, reject) => {
 					loader.load(
 						"../models/trafficlight.glb?url",
 						gltf => {
 							const light = gltf.scene
-							light.scale.set(3, 3, 3)
+							light.userData.name = "trafficLight"
+							light.scale.set(3.5, 3.5, 3.5)
 							// позиционируем в ЛЕВЫЙ ВЕРХНИЙ угол тайла
 							light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
 							scene.add(light)
+							const lightobj1 = light.getObjectByName("trafficlight1")
+							const lightobj2 = light.getObjectByName("trafficlight2")
+							const lightobj3 = light.getObjectByName("trafficlight3")
+
+							if (lightobj1 && lightobj2 && lightobj3) {
+								lightobj1.userData.angle = extra.angle
+								lightobj2.userData.angle = extra.angle + 90
+								lightobj3.userData.angle = extra.angle
+								trafficlights.push(lightobj1, lightobj2)
+								pedlights.push(lightobj3)
+								getLightMaterials(lightobj1, lightobj3)
+							}
 							resolve()
 						},
 						undefined,
@@ -312,6 +329,104 @@
 				})
 			}
 		}
+	}
+
+	const clock = new THREE.Clock()
+	let switchTimer = 0
+	let state = "green_NS" // N-S (0/180) зелёный, E-W (90/270) красный
+	const switchInterval = 10000 // мс
+	let lightmaterials: Record<string, THREE.Material> = {}
+	const lightnames = {
+		red: ["trafficlight1_2", "trafficlight2_2", "trafficlight3_2"],
+		yellow: ["trafficlight1_3", "trafficlight2_3"],
+		green: ["trafficlight1_4", "trafficlight2_4", "trafficlight3_2"],
+		black: ["trafficlight3_2"],
+	}
+
+	function getLightMaterials(obj: THREE.Object3D<THREE.Object3DEventMap>, obj2: THREE.Object3D<THREE.Object3DEventMap>) {
+		let mesh
+		for (let i = 1; i < obj.children.length; i++) {
+			mesh = obj.children[i]
+			if (!(mesh instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+			lightmaterials[mesh.material.name] = mesh.material
+		}
+		for (let i = 1; i < obj2.children.length; i++) {
+			mesh = obj2.children[i]
+			if (!(mesh instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+			lightmaterials[mesh.material.name] = mesh.material
+		}
+	}
+
+	function updateTrafficLights() {
+		const deltaTime = clock.getDelta() * 1000
+		switchTimer += deltaTime
+
+		if (switchTimer >= switchInterval) {
+			switchTimer = 0
+
+			if (state === "green_NS") {
+				updateGroupLights([0, 180], "yellow")
+				updateGroupLights([90, 270], "red")
+				updatePedestrianLights([0, 180], "red")
+				state = "yellow_NS"
+			} else if (state === "yellow_NS") {
+				updateGroupLights([0, 180], "red")
+				updateGroupLights([90, 270], "green")
+				updatePedestrianLights([90, 270], "red")
+				updatePedestrianLights([0, 180], "green")
+				state = "green_EW"
+			} else if (state === "green_EW") {
+				updateGroupLights([90, 270], "yellow")
+				updateGroupLights([0, 180], "red")
+				updatePedestrianLights([0, 180], "red")
+				state = "yellow_EW"
+			} else if (state === "yellow_EW") {
+				updateGroupLights([90, 270], "red")
+				updateGroupLights([0, 180], "green")
+				updatePedestrianLights([90, 270], "green")
+				updatePedestrianLights([0, 180], "red")
+				state = "green_NS"
+			}
+		}
+	}
+
+	function updateGroupLights(angles: number[], color: "black" | "red" | "yellow" | "green") {
+		trafficlights.forEach(light => {
+			if (angles.includes(light.userData.angle)) setTrafficLightColor(light, color)
+		})
+	}
+
+	function updatePedestrianLights(angles: number[], color: "black" | "red" | "yellow" | "green") {
+		pedlights.forEach(light => {
+			if (angles.includes(light.userData.angle)) setPedestrianLightColor(light, color)
+		})
+	}
+
+	function setTrafficLightColor(light: THREE.Object3D, color: "black" | "red" | "yellow" | "green") {
+		let child
+		for (let i = 1; i < light.children.length; i++) {
+			child = light.children[i]
+			if (!(child instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+			child.material = lightnames[color].includes(child.name)
+				? lightmaterials[`${color}light`]
+				: lightmaterials["blacklight"]
+		}
+	}
+
+	function setPedestrianLightColor(light: THREE.Object3D, color: "black" | "red" | "yellow" | "green") {
+		let child
+		for (let i = 1; i < light.children.length; i++) {
+			child = light.children[i]
+			if (!(child instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+			child.material = lightnames[color].includes(child.name)
+				? lightmaterials[`${color}light`]
+				: lightmaterials["blacklight"]
+		}
+	}
+
+	// Возвращает правильный материал для лампы в зависимости от текущей фазы
+	function getMaterialForLight(lightName: string, activeColor: string) {
+		return lightName === activeColor ? lightmaterials[`${activeColor}light`] : lightmaterials["blacklight"]
 	}
 
 	const updateSteeringWheel = () => {
@@ -386,6 +501,8 @@
 		requestAnimationFrame(animate)
 		if (time - lastFrameTime < frameDuration) return
 		lastFrameTime = time
+
+		updateTrafficLights()
 
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
@@ -463,6 +580,9 @@
 	}
 
 	onMounted(async () => {
+		texturePromises = Object.fromEntries(
+			Object.entries(textureUrls).map(([key, path]) => [key, path.then(module => textureLoader.load(module.default))])
+		)
 		await loadLevel()
 		console.log(levelData.value)
 		if (levelData.value) {

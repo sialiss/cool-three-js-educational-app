@@ -32,17 +32,20 @@ export type Extra =
 	| {
 			type: "trafficlight"
 			position: Vector2Like
+			angle: number
 	  }
 	| {
 			type: "sign"
-            name: string
+			name: string
 			radius: number
 			function: string
 			position: Vector2Like
+			angle: number
 	  }
 	| {
 			type: "crosswalk"
 			position: Vector2Like
+			angle: number
 	  }
 
 export type Goal = {

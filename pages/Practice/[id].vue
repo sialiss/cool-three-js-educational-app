@@ -3,3 +3,16 @@
 		<PracticeScene />
 	</div>
 </template>
+
+<script setup>
+	definePageMeta({
+		layout: "default",
+		practiceFullHeight: true,
+	})
+</script>
+
+<style scoped>
+	.practice {
+		height: 100%;
+	}
+</style>
