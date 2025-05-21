@@ -1,13 +1,28 @@
 <template>
 	<div class="dashboard">
-
 		<div class="top-controls">
 			<h2>Список пользователей</h2>
+
+			<!-- Фильтры -->
+			<div class="filters">
+				<select v-model="selectedGroup" @change="fetchUsers" class="filter-select">
+					<option value="">Все группы</option>
+					<option v-for="group in groups" :key="group.id" :value="group.id">
+						{{ group.name }}
+					</option>
+				</select>
+
+				<select v-model="selectedStatus" @change="fetchUsers" class="filter-select">
+					<option value="">Все статусы</option>
+					<option value="active">Активные</option>
+					<option value="finished">Завершённые</option>
+				</select>
+			</div>
+
 			<button class="create-btn" @click="creating = !creating">
 				{{ creating ? "Отмена" : "Создать пользователя" }}
 			</button>
 		</div>
-
 		<div class="users">
 			<!-- Форма создания нового пользователя -->
 			<div v-if="creating" class="create-user-form">
@@ -19,16 +34,26 @@
 					<input v-model="newUser.login" placeholder="Логин" required />
 					<input v-model="newUser.password" placeholder="Пароль" type="password" required />
 					<input v-model="newUser.phone" placeholder="Телефон" />
+
 					<select v-model="newUser.role" required>
 						<option v-for="role in roles" :key="role" :value="role">
 							{{ role.charAt(0).toUpperCase() + role.slice(1) }}
 						</option>
 					</select>
+
+					<!-- Выбор групп -->
+					<label>Группы:</label>
+					<select v-model="newUser.groupIds" multiple>
+						<option v-for="group in groups" :key="group.id" :value="group.id">
+							{{ group.name }}
+						</option>
+					</select>
+
 					<button type="submit" class="submit-btn">Сохранить</button>
 				</form>
 			</div>
 
-			<!-- Список пользователей и детали -->
+			<!-- Список пользователей -->
 			<template v-else>
 				<ul class="item-list user-list">
 					<li
@@ -53,6 +78,9 @@
 	import UserDetails from "~/components/UserDetails.vue"
 
 	const users = ref([])
+	const groups = ref([])
+	const selectedGroup = ref("")
+	const selectedStatus = ref("")
 	const selectedUser = ref(null)
 	const creating = ref(false)
 	const roles = ["user", "admin", "moderator"]
@@ -66,15 +94,28 @@
 		password: "",
 		phone: "",
 		role: "user",
+		groupIds: [],
 	})
 
 	const fetchUsers = async () => {
-		const res = await fetch("http://localhost:8000/user")
+		const params = new URLSearchParams()
+		if (selectedGroup.value) params.append("groupId", selectedGroup.value)
+		if (selectedStatus.value) params.append("status", selectedStatus.value)
+
+		const res = await fetch(`http://localhost:8000/user?${params.toString()}`)
 		users.value = await res.json()
 		selectedUser.value = null
 	}
 
-	onMounted(fetchUsers)
+	const fetchGroups = async () => {
+		const res = await fetch("http://localhost:8000/group")
+		groups.value = await res.json()
+	}
+
+	onMounted(() => {
+		fetchGroups()
+		fetchUsers()
+	})
 
 	const selectUser = user => {
 		selectedUser.value = user
@@ -86,16 +127,7 @@
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({
-                surname: newUser.value.surname,
-                name: newUser.value.name,
-                patronymic: newUser.value.patronymic,
-				login: newUser.value.login,
-				role: newUser.value.role,
-				password: newUser.value.password,
-				email: newUser.value.email,
-				phone: newUser.value.phone,
-			}),
+			body: JSON.stringify(newUser.value),
 		})
 		await fetchUsers()
 		creating.value = false
@@ -108,6 +140,7 @@
 			password: "",
 			phone: "",
 			role: "user",
+			groupIds: [],
 		}
 	}
 </script>
@@ -168,5 +201,26 @@
 	}
 	.submit-btn:hover {
 		background: #0069d9;
+	}
+
+	.filters {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.filter-select {
+		padding: 8px 12px;
+		border: 1px solid #ccc;
+		border-radius: 6px;
+		background-color: #f8f9fa;
+		color: #333;
+		font-size: 14px;
+		cursor: pointer;
+	}
+
+	.filter-select:hover {
+		border-color: #999;
+		background-color: #f1f1f1;
 	}
 </style>
