@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware((to: { path: string }, from: { path: st
 	const { isAuthenticated, getRole } = useAuth()
 
 	// Если пользователь не авторизован и пытается зайти на защищенную страницу
-	if (!isAuthenticated.value && to.path !== "/login") {
+	if (!isAuthenticated.value && !["/login", "/"].includes(to.path)) {
 		return navigateTo("/login")
 	}
 
