@@ -316,6 +316,7 @@
 							light.scale.set(3.5, 3.5, 3.5)
 							// позиционируем в ЛЕВЫЙ ВЕРХНИЙ угол тайла
 							light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
+                            light.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI
 							scene.add(light)
 							const lightobj1 = light.getObjectByName("trafficlight1")
 							const lightobj2 = light.getObjectByName("trafficlight2")
@@ -397,6 +398,7 @@
 	}
 
 	function checkSignLogic(logic: string, player: any): boolean {
+        if (logic === "") return false
 		if (logic === "stopped") return player.speed === 0
 		if (logic === "onRightLane") return player.lane === "right"
 		if (logic === "onLeftLane") return player.lane === "left"
