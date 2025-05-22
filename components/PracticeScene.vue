@@ -9,6 +9,7 @@
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 	import { useRoute } from "vue-router"
 	import type { Level } from "../utils/types"
+	import { trafficSigns } from "../utils/signs"
 
 	const route = useRoute()
 	const levelData = ref<Level | null>(null)
@@ -116,6 +117,7 @@
 		{ name: "whitehouse", path: "../models/whitehouse.glb?url" },
 		{ name: "pinkhouse", path: "../models/pinkhouse.glb?url" },
 		{ name: "trafficlight", path: "../models/trafficlight.glb?url" },
+		{ name: "sign", path: "../models/sign.glb?url" },
 	]
 
 	const loadModels = async () => {
