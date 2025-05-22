@@ -12,16 +12,16 @@
 					</option>
 				</select>
 
-				<template v-if="extra.name === 'Ограничение скорости'">
+				<template v-if="extra.name.startsWith('Ограничение скорости')">
 					<label>Ограничение (км/ч):</label>
 					<select v-model.number="speedLimit">
 						<option v-for="value in speedOptions" :key="value" :value="value">{{ value }} км/ч</option>
 					</select>
 				</template>
-				<template v-else>
-					<label>Функция (JS-условие):</label>
-					<input v-model="extra.function" placeholder="например: car.speed > 30" />
-				</template>
+				<!-- <template v-else>
+					<label>Функция (JS-условие):</label> -->
+				<!-- <input v-model="extra.function" placeholder="например: car.speed > 30" /> -->
+				<!-- </template> -->
 
 				<label>Радиус:</label>
 				<input type="number" v-model.number="extra.radius" />
@@ -44,25 +44,16 @@
 
 <script setup lang="ts">
 	import type { Extra } from "../utils/types"
+	import { trafficSigns } from "../utils/signs"
+
+	const signs = trafficSigns
 
 	const props = defineProps<{
 		extra: Extra
 	}>()
 	const { extra } = toRefs(props)
 
-	const signs = [
-		{ name: "Стоп", function: "🛑" },
-		{ name: "Уступи дорогу", function: "⚠️" },
-		{ name: "Главная дорога", function: "🟡" },
-		{ name: "Пешеходный переход", function: "🚸" },
-		{ name: "Ограничение скорости", function: "🚫🚗" },
-		{ name: "Движение запрещено", function: "🚫" },
-		{ name: "Обгон запрещён", function: "↔️🚫" },
-		{ name: "Опасный поворот", function: "↩️" },
-		{ name: "Дети", function: "🚸👶" },
-		{ name: "Дорожные работы", function: "🚧" },
-	]
-	const speedOptions = [20, 30, 40, 50, 60, 70, 80, 90, 100]
+	const speedOptions = [40, 50, 60, 70, 80, 90, 100, 110, 120, 130]
 	const speedLimit = ref(60)
 
 	const emit = defineEmits(["close"])
@@ -79,8 +70,9 @@
 	}
 
 	watch(speedLimit, value => {
-		if (extra.value.type === "sign" && extra.value.name === "Ограничение скорости") {
-			extra.value.function = `car.speed > ${speedLimit.value}`
+		if (extra.value.type === "sign" && extra.value.name.startsWith("Ограничение скорости")) {
+			extra.value.function = `speed<=${value}`
+			extra.value.name = `Ограничение скорости ${value}`
 		}
 	})
 
@@ -89,13 +81,13 @@
 		name => {
 			if (extra.value.type !== "sign") return
 
-			if (name === "Ограничение скорости") {
-				speedLimit.value = 60
-				extra.value.function = `car.speed > 60`
-			} else if (name === "Стоп") {
-				extra.value.function = "stop"
+			if (name?.startsWith("Ограничение скорости")) {
+				const match = name.match(/(\d+)/)
+				const limit = match ? parseInt(match[1]) : 60
+				speedLimit.value = limit
+				extra.value.function = `speed<=${limit}`
 			} else {
-				extra.value.function = ""
+				extra.value.function = signs.find(sign => sign.name === extra.value.type)?.function || ""
 			}
 		}
 	)

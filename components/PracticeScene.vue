@@ -52,6 +52,12 @@
 	}
 	let trafficlights: THREE.Object3D[] = []
 	let pedlights: THREE.Object3D[] = []
+	const signZones: {
+		sign: THREE.Group<THREE.Object3DEventMap>
+		radius: number
+		logic: string
+		position: THREE.Vector3
+	}[] = []
 
 	const init = () => {
 		scene = new THREE.Scene()
@@ -329,8 +335,90 @@
 						reject
 					)
 				})
+			} else if (type === "sign") {
+				await new Promise<void>((resolve, reject) => {
+					loader.load(
+						"../models/sign.glb?url",
+						gltf => {
+							const sign = gltf.scene
+							const textureLoader = new THREE.TextureLoader()
+							const signtexure_path = trafficSigns.find(sign => sign.name === extra.name)
+							let texturePath
+							if (signtexure_path) {
+								texturePath = sign ? `../models/traffic_signs-01-3ds/${signtexure_path.texture}` : null
+							}
+
+							if (texturePath) {
+								textureLoader.load(texturePath, texture => {
+									texture.flipY = false
+									// Найди дочерний меш, где нужно заменить текстуру
+									const targetChild = sign.children[0].children[0] // или другой нужный index
+
+									if (targetChild && targetChild.material) {
+										targetChild.material.map = texture
+										targetChild.material.needsUpdate = true
+									}
+								})
+							}
+
+							// Угол поворота
+							sign.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI / 2
+
+							sign.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
+							sign.userData = { type: "sign", logic: extra.function, radius: extra.radius }
+							scene.add(sign)
+
+							// Визуализация радиуса действия (можно скрыть позже)
+							const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
+							const zoneMaterial = new THREE.MeshBasicMaterial({
+								color: 0x00ff00,
+								opacity: 0.2,
+								transparent: true,
+							})
+							const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
+							zone.position.set(pz, 0.005, px)
+							scene.add(zone)
+
+							// Проверка логики при пересечении (добавь в update-фрейм игры):
+							signZones.push({
+								sign,
+								radius: extra.radius,
+								logic: extra.function,
+								position: new THREE.Vector3(pz, 0, px),
+							})
+							resolve()
+						},
+						undefined,
+						reject
+					)
+				})
 			}
 		}
+	}
+
+	function checkSignLogic(logic: string, player: any): boolean {
+		if (logic === "stopped") return player.speed === 0
+		if (logic === "onRightLane") return player.lane === "right"
+		if (logic === "onLeftLane") return player.lane === "left"
+
+		const speedMatch = logic.match(/^speed([<>]=?)(\d+)$/)
+		if (speedMatch) {
+			const op = speedMatch[1]
+			const value = parseFloat(speedMatch[2])
+			switch (op) {
+				case "<":
+					return player.speed < value
+				case "<=":
+					return player.speed <= value
+				case ">":
+					return player.speed > value
+				case ">=":
+					return player.speed >= value
+			}
+		}
+
+		console.warn("Неизвестная логика:", logic)
+		return false
 	}
 
 	const clock = new THREE.Clock()
@@ -510,6 +598,19 @@
 		car.getWorldDirection(direction)
 
 		updateCarMovement(car)
+
+		for (const zone of signZones) {
+			const distance = car.position.distanceTo(zone.position)
+			if (distance < zone.radius) {
+				const success = checkSignLogic(zone.logic, car)
+				if (success) {
+					// player.win()
+					console.log("winnnnn")
+				} else {
+					console.log("losssse")
+				}
+			}
+		}
 
 		// Центрируем камеру на машине
 		if (isFirstPerson) {
