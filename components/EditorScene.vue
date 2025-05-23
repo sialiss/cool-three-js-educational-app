@@ -91,6 +91,12 @@
 						>
 							🚶‍♂️
 						</button>
+						<button
+							@click="setExtraMode('finish')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'finish', active: true }"
+						>
+							🏁
+						</button>
 					</div>
 				</details>
 			</div>
@@ -168,7 +174,7 @@
 		| { name: "idle" }
 		| { name: "grass" }
 		| { name: "road"; type: string; angle: number }
-		| { name: "extra"; extraType: "trafficlight" | "sign" | "crosswalk" }
+		| { name: "extra"; extraType: "trafficlight" | "sign" | "crosswalk" | "finish" }
 
 	const mode = ref<Mode>({ name: "idle" })
 	const editExtra = ref<Extra | null>(null)
@@ -223,7 +229,7 @@
 		}
 	}
 
-	function setExtraMode(extraType: "trafficlight" | "sign" | "crosswalk") {
+	function setExtraMode(extraType: "trafficlight" | "sign" | "crosswalk" | "finish") {
 		if (mode.value.name === "extra" && mode.value.extraType === extraType) {
 			mode.value = { name: "idle" }
 		} else {
@@ -283,8 +289,18 @@
 				case "sign":
 					newExtra = {
 						type: "sign",
-						name: "Стоп",
+						name: "Въезд запрещён",
 						function: "",
+						radius: 10,
+						position: { x, y },
+						angle: 0,
+					}
+					break
+				case "finish":
+					newExtra = {
+						type: "sign",
+						name: "Финиш",
+						function: "win",
 						radius: 10,
 						position: { x, y },
 						angle: 0,
@@ -314,7 +330,13 @@
 				}
 			} else {
 				marker = new Sprite(Texture.WHITE)
-				marker.tint = mode.value.extraType !== "trafficlight" ? 0xffffff : 0xff0000
+				marker.tint =
+					mode.value.extraType === "trafficlight"
+						? 0xffffff
+						: mode.value.extraType === "finish"
+						? 0x00ff00
+						: 0xff0000
+
 				marker.width = 5
 				marker.height = 5
 				marker.angle = newExtra.angle

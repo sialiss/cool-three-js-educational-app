@@ -1,6 +1,14 @@
 <template>
 	<div ref="threeCanvas" class="three-canvas"></div>
 	<div id="speedometer" v-show="isFirstPerson" class="speedometer">{{ speed.toFixed(0) }} км/ч</div>
+
+	<!-- Нарушение правил -->
+	<div v-if="violationMessageVisible" class="violation-message">
+		{{ violationMessage }}
+	</div>
+
+	<!-- Результат -->
+	<ViolationSummary v-if="showSummary" :log="violationLogObject" @close="showSummary = false" />
 </template>
 
 <script setup lang="ts">
@@ -11,10 +19,10 @@
 	import { useRoute } from "vue-router"
 	import type { Level } from "../utils/types"
 	import { trafficSigns } from "../utils/signs"
-    import { useAuth } from "@/composables/useAuth"
+	import { useAuth } from "@/composables/useAuth"
 
 	const route = useRoute()
-    const { getRole } = useAuth()
+	const { getRole } = useAuth()
 	const levelData = ref<Level | null>(null)
 
 	const loadLevel = async () => {
@@ -63,7 +71,20 @@
 		radius: number
 		logic: string
 		position: THREE.Vector3
+		message?: string
 	}[] = []
+	const showSummary = ref(false)
+	const violationMessage = ref("")
+	const violationMessageVisible = ref(false)
+	const violationLog = ref(new Map<string, number>())
+	const violationLogObject = computed(() => {
+		const obj: Record<string, number> = {}
+		for (const [key, value] of violationLog.value.entries()) {
+			obj[key] = value
+		}
+		return obj
+	})
+	let violationTimeout: ReturnType<typeof setTimeout> | null = null
 
 	const init = () => {
 		scene = new THREE.Scene()
@@ -349,10 +370,10 @@
 						gltf => {
 							const sign = gltf.scene
 							const textureLoader = new THREE.TextureLoader()
-							const signtexure_path = trafficSigns.find(sign => sign.name === extra.name)
+							const signinfo = trafficSigns.find(sign => sign.name === extra.name)
 							let texturePath
-							if (signtexure_path) {
-								texturePath = sign ? `../models/traffic_signs-01-3ds/${signtexure_path.texture}` : null
+							if (signinfo) {
+								texturePath = sign ? `../models/traffic_signs-01-3ds/${signinfo.texture}` : null
 							}
 
 							if (texturePath) {
@@ -360,11 +381,9 @@
 									texture.flipY = false
 									// Найди дочерний меш, где нужно заменить текстуру
 									const targetChild = sign.children[0].children[0] // или другой нужный index
-
-									if (targetChild && targetChild.material) {
-										targetChild.material.map = texture
-										targetChild.material.needsUpdate = true
-									}
+									if (!(targetChild instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+									targetChild.material.map = texture
+									targetChild.material.needsUpdate = true
 								})
 							}
 
@@ -393,6 +412,7 @@
 									radius: extra.radius,
 									logic: extra.function,
 									position: new THREE.Vector3(pz, 0, px),
+									message: signinfo?.message,
 								})
 							}
 
@@ -407,7 +427,7 @@
 	}
 
 	function checkSignLogic(logic: string, player: any): boolean {
-		if (logic === "") return false
+		if (logic === "") return true
 		if (logic === "stopped") return player.speed === 0
 		if (logic === "onRightLane") return player.lane === "right"
 		if (logic === "onLeftLane") return player.lane === "left"
@@ -416,7 +436,6 @@
 		if (speedMatch) {
 			const op = speedMatch[1]
 			const value = parseFloat(speedMatch[2])
-			console.log(velocity * kms, value)
 			switch (op) {
 				case "<":
 					return velocity * kms < value
@@ -614,12 +633,13 @@
 		for (const zone of signZones) {
 			const distance = car.position.distanceTo(zone.position)
 			if (distance < zone.radius) {
-				const success = checkSignLogic(zone.logic, car)
-				if (success) {
-					// player.win()
-					console.log("winnnnn")
-				} else {
-					console.log("losssse")
+				if (zone.logic === "win") endLevel()
+				else {
+					const success = checkSignLogic(zone.logic, car)
+					if (!success) {
+                        console.log(zone.message)
+						showViolation(`Нарушение: ${zone.message}`) // или zone.message
+					}
 				}
 			}
 		}
@@ -651,10 +671,32 @@
 			controls.update()
 		}
 
-        speed.value = velocity * kms
+		speed.value = velocity * kms
 
 		updateSteeringWheel()
 		renderer.render(scene, camera)
+	}
+
+	function showViolation(message: string) {
+		if (violationLog.value.has(message)) {
+			violationLog.value.set(message, violationLog.value.get(message)! + 1)
+		} else {
+			violationLog.value.set(message, 1)
+		}
+
+		violationMessage.value = message
+		violationMessageVisible.value = true
+
+		if (violationTimeout) {
+			clearTimeout(violationTimeout)
+		}
+		violationTimeout = setTimeout(() => {
+			violationMessageVisible.value = false
+		}, 5000)
+	}
+
+	function endLevel() {
+		showSummary.value = true
 	}
 
 	const handleKeyDown = (event: KeyboardEvent) => {
@@ -700,7 +742,7 @@
 		console.log(levelData.value)
 		if (levelData.value) {
 			init()
-            if (getRole() == "admin") isFirstPerson.value = false
+			if (getRole() == "admin") isFirstPerson.value = false
 			await drawField(levelData.value.size, levelData.value.field, scene, true, true)
 			if (levelData.value.extras) {
 				await drawExtras(levelData.value.extras, scene)
@@ -732,5 +774,23 @@
 		border-radius: 8px;
 		pointer-events: none;
 		user-select: none;
+	}
+
+	.violation-message {
+		position: absolute;
+		top: 20px;
+		left: 50%;
+		transform: translateX(-50%);
+		background-color: rgba(255, 0, 0, 0.85);
+		color: #fff;
+		padding: 12px 24px;
+		font-size: 20px;
+		font-weight: bold;
+		font-family: sans-serif;
+		border-radius: 10px;
+		box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+		z-index: 100;
+		transition: opacity 0.3s ease;
+		pointer-events: none;
 	}
 </style>
