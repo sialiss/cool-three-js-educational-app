@@ -157,6 +157,7 @@
 	const textureUrls = {
 		grass: import("../assets/images/grass.png"),
 		road: import("../assets/images/road.png"),
+        turning_road: import("../assets/images/turning_road.png"),
 		road_with_line: import("../assets/images/road_with_line.png"),
 		road_with_wide_line: import("../assets/images/road_with_wide_line.png"),
 		road_with_long_dashes: import("../assets/images/road_with_long_dashes.png"),

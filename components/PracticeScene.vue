@@ -39,6 +39,7 @@
 	const textureUrls = {
 		grass: import("../assets/images/grass.png"),
 		road: import("../assets/images/road.png"),
+		turning_road: import("../assets/images/turning_road.png"),
 		road_with_line: import("../assets/images/road_with_line.png"),
 		road_with_wide_line: import("../assets/images/road_with_wide_line.png"),
 		road_with_long_dashes: import("../assets/images/road_with_long_dashes.png"),
@@ -72,6 +73,7 @@
 		logic: string
 		position: THREE.Vector3
 		message?: string
+		entered: boolean
 	}[] = []
 	const showSummary = ref(false)
 	const violationMessage = ref("")
@@ -413,6 +415,7 @@
 									logic: extra.function,
 									position: new THREE.Vector3(pz, 0, px),
 									message: signinfo?.message,
+									entered: false,
 								})
 							}
 
@@ -632,15 +635,23 @@
 
 		for (const zone of signZones) {
 			const distance = car.position.distanceTo(zone.position)
-			if (distance < zone.radius) {
-				if (zone.logic === "win") endLevel()
-				else {
-					const success = checkSignLogic(zone.logic, car)
-					if (!success) {
-                        console.log(zone.message)
-						showViolation(`Нарушение: ${zone.message}`) // или zone.message
+			const isInside = distance < zone.radius
+
+			if (isInside) {
+				if (!zone.entered) {
+					zone.entered = true // помечаем как вошли
+
+					if (zone.logic === "win") {
+						endLevel()
+					} else {
+						const success = checkSignLogic(zone.logic, car)
+						if (!success) {
+							showViolation(`Нарушение: ${zone.message}`)
+						}
 					}
 				}
+			} else {
+				zone.entered = false // выехал — можно снова засчитывать при следующем въезде
 			}
 		}
 
