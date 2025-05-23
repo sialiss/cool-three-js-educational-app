@@ -11,8 +11,10 @@
 	import { useRoute } from "vue-router"
 	import type { Level } from "../utils/types"
 	import { trafficSigns } from "../utils/signs"
+    import { useAuth } from "@/composables/useAuth"
 
 	const route = useRoute()
+    const { getRole } = useAuth()
 	const levelData = ref<Level | null>(null)
 
 	const loadLevel = async () => {
@@ -48,7 +50,7 @@
 	const kms = 300
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
-	const isFirstPerson = ref(false)
+	const isFirstPerson = ref(true)
 	const speed = ref(0)
 
 	let texturePromises: {
@@ -659,7 +661,7 @@
 		if (event.key in keys) {
 			keys[event.key as keyof typeof keys] = true
 		}
-		if (event.key === "1") {
+		if (getRole() == "admin" && event.key === "1") {
 			toggleCameraMode()
 		}
 	}
@@ -698,6 +700,7 @@
 		console.log(levelData.value)
 		if (levelData.value) {
 			init()
+            if (getRole() == "admin") isFirstPerson.value = false
 			await drawField(levelData.value.size, levelData.value.field, scene, true, true)
 			if (levelData.value.extras) {
 				await drawExtras(levelData.value.extras, scene)
