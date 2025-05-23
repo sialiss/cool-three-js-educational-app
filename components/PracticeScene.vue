@@ -1,5 +1,6 @@
 <template>
 	<div ref="threeCanvas" class="three-canvas"></div>
+	<div id="speedometer" v-show="isFirstPerson" class="speedometer">{{ speed.toFixed(0) }} км/ч</div>
 </template>
 
 <script setup lang="ts">
@@ -44,9 +45,12 @@
 	let wheels: Record<string, THREE.Object3D> = {}
 	let steeringWheel: THREE.Object3D
 	let controls: OrbitControls
+	const kms = 300
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
-	let isFirstPerson = false
+	const isFirstPerson = ref(false)
+	const speed = ref(0)
+
 	let texturePromises: {
 		[k: string]: Promise<THREE.Texture>
 	}
@@ -316,7 +320,7 @@
 							light.scale.set(3.5, 3.5, 3.5)
 							// позиционируем в ЛЕВЫЙ ВЕРХНИЙ угол тайла
 							light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
-                            light.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI
+							light.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI
 							scene.add(light)
 							const lightobj1 = light.getObjectByName("trafficlight1")
 							const lightobj2 = light.getObjectByName("trafficlight2")
@@ -370,23 +374,26 @@
 							scene.add(sign)
 
 							// Визуализация радиуса действия (можно скрыть позже)
-							const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
-							const zoneMaterial = new THREE.MeshBasicMaterial({
-								color: 0x00ff00,
-								opacity: 0.2,
-								transparent: true,
-							})
-							const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
-							zone.position.set(pz, 0.005, px)
-							scene.add(zone)
+							if (extra.function) {
+								const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
+								const zoneMaterial = new THREE.MeshBasicMaterial({
+									color: 0x00ff00,
+									opacity: 0.2,
+									transparent: true,
+								})
+								const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
+								zone.position.set(pz, 0.005, px)
+								scene.add(zone)
 
-							// Проверка логики при пересечении (добавь в update-фрейм игры):
-							signZones.push({
-								sign,
-								radius: extra.radius,
-								logic: extra.function,
-								position: new THREE.Vector3(pz, 0, px),
-							})
+								// Проверка логики при пересечении:
+								signZones.push({
+									sign,
+									radius: extra.radius,
+									logic: extra.function,
+									position: new THREE.Vector3(pz, 0, px),
+								})
+							}
+
 							resolve()
 						},
 						undefined,
@@ -398,7 +405,7 @@
 	}
 
 	function checkSignLogic(logic: string, player: any): boolean {
-        if (logic === "") return false
+		if (logic === "") return false
 		if (logic === "stopped") return player.speed === 0
 		if (logic === "onRightLane") return player.lane === "right"
 		if (logic === "onLeftLane") return player.lane === "left"
@@ -407,15 +414,16 @@
 		if (speedMatch) {
 			const op = speedMatch[1]
 			const value = parseFloat(speedMatch[2])
+			console.log(velocity * kms, value)
 			switch (op) {
 				case "<":
-					return player.speed < value
+					return velocity * kms < value
 				case "<=":
-					return player.speed <= value
+					return velocity * kms <= value
 				case ">":
-					return player.speed > value
+					return velocity * kms > value
 				case ">=":
-					return player.speed >= value
+					return velocity * kms >= value
 			}
 		}
 
@@ -539,7 +547,7 @@
 	let velocity = 0
 	const acceleration = 0.002
 	const deceleration = 0.001
-	const maxSpeed = 0.2
+	const maxSpeed = 0.4
 	const rotationSpeedFactor = 0.02
 	const updateCarMovement = (car: THREE.Object3D) => {
 		const direction = new THREE.Vector3()
@@ -615,7 +623,7 @@
 		}
 
 		// Центрируем камеру на машине
-		if (isFirstPerson) {
+		if (isFirstPerson.value) {
 			const carDirection = new THREE.Vector3()
 			car.getWorldDirection(carDirection)
 
@@ -640,6 +648,8 @@
 			controls.target.set(car.position.x, car.position.y, car.position.z)
 			controls.update()
 		}
+
+        speed.value = velocity * kms
 
 		updateSteeringWheel()
 		renderer.render(scene, camera)
@@ -676,12 +686,8 @@
 	}
 
 	const toggleCameraMode = () => {
-		isFirstPerson = !isFirstPerson
-		if (isFirstPerson) {
-			controls.enabled = false
-		} else {
-			controls.enabled = true
-		}
+		isFirstPerson.value = !isFirstPerson.value
+		controls.enabled = !isFirstPerson.value
 	}
 
 	onMounted(async () => {
@@ -709,5 +715,19 @@
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
+	}
+
+	.speedometer {
+		position: absolute;
+		bottom: 20px;
+		right: 20px;
+		padding: 8px 14px;
+		background: rgba(0, 0, 0, 0.6);
+		color: #fff;
+		font-size: 18px;
+		font-family: sans-serif;
+		border-radius: 8px;
+		pointer-events: none;
+		user-select: none;
 	}
 </style>
