@@ -1,31 +1,69 @@
 <template>
 	<div class="modal-overlay" @click.self="close">
 		<div class="modal">
-			<h2>Нарушения за уровень</h2>
-			<ul>
+			<h2 v-if="hasViolations">Нарушения за уровень</h2>
+			<h2 v-else>Уровень пройден без нарушений 🎉</h2>
+
+			<ul v-if="hasViolations">
 				<li v-for="[message, count] in Object.entries(log)" :key="message">
 					<strong>{{ message }}</strong
 					>: {{ count }} раз
 				</li>
 			</ul>
-			<button @click="close">Закрыть</button>
+
+			<div class="button-group">
+				<button @click="goToDashboard">К списку уроков</button>
+				<button @click="repeatLevel">Повторить</button>
+				<button @click="close">Закрыть</button>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-	defineProps<{
+	import { useRouter, useRoute } from "vue-router"
+	import { onMounted } from "vue"
+    import { useAuth } from "@/composables/useAuth"
+    const { togglePracticeComplete } = useAuth()
+
+	const props = defineProps<{
 		log: Record<string, number>
+        id: number
 	}>()
 
-	const emit = defineEmits(["close"])
+	const emit = defineEmits(["close", "passed"])
+	const router = useRouter()
+
+	// Уровень засчитывается пройденным, если нет нарушений
+	const hasViolations = Object.keys(props.log).length > 0
+
+	onMounted(() => {
+		if (!hasViolations) {
+			togglePracticeComplete(props.id)
+		}
+	})
 
 	function close() {
 		emit("close")
 	}
+
+	function goToDashboard() {
+		router.push("/dashboard")
+	}
+
+	function repeatLevel() {
+		// Перезапускаем текущий маршрут (перезагрузка компонента без перезагрузки страницы)
+		router.go(0)
+	}
 </script>
 
 <style scoped>
+	.button-group {
+		display: flex;
+		gap: 10px;
+		margin-top: 20px;
+	}
+
 	.modal-overlay {
 		position: fixed;
 		top: 0;

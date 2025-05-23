@@ -8,7 +8,7 @@
 	</div>
 
 	<!-- Результат -->
-	<ViolationSummary v-if="showSummary" :log="violationLogObject" @close="showSummary = false" />
+	<ViolationSummary v-if="showSummary" :log="violationLogObject" :id="Number(route.params.id)" @close="showSummary = false" />
 </template>
 
 <script setup lang="ts">
@@ -639,7 +639,7 @@
 
 			if (isInside) {
 				if (!zone.entered) {
-					zone.entered = true // помечаем как вошли
+					zone.entered = true // машина находится в зоне действия
 
 					if (zone.logic === "win") {
 						endLevel()
@@ -651,7 +651,7 @@
 					}
 				}
 			} else {
-				zone.entered = false // выехал — можно снова засчитывать при следующем въезде
+				zone.entered = false // машина выехала
 			}
 		}
 
@@ -750,7 +750,6 @@
 			Object.entries(textureUrls).map(([key, path]) => [key, path.then(module => textureLoader.load(module.default))])
 		)
 		await loadLevel()
-		console.log(levelData.value)
 		if (levelData.value) {
 			init()
 			if (getRole() == "admin") isFirstPerson.value = false

@@ -18,7 +18,11 @@
 					:class="{ completed: lesson.completed, selected: lesson === selectedLesson }"
 				>
 					<span>{{ lesson.title }}</span>
-					<span v-if="lesson.completed" class="status">✓</span>
+					<div>
+						<span v-if="lesson.practice && lesson.practiceCompleted" class="status">🚘︎</span>
+						<span v-if="lesson.theory && lesson.theoryCompleted" class="status">🕮</span>
+						<span v-if="lesson.completed" class="status">✓</span>
+					</div>
 				</li>
 			</ul>
 
@@ -31,6 +35,7 @@
 	import { ref, computed, onMounted, provide } from "vue"
 	import LessonDescription from "~/components/LessonDescription.vue"
 	import { useAuth } from "@/composables/useAuth"
+
 	const { getRole, getMe } = useAuth()
 
 	const lessons = ref([])
@@ -38,26 +43,33 @@
 
 	onMounted(async () => {
 		try {
-			// 1. Получаем все уроки
+			// Получаем уроки
 			const resLessons = await fetch("http://localhost:8000/lessons/", {
 				headers: { "Content-Type": "application/json" },
 			})
 			if (!resLessons.ok) throw new Error("Не удалось загрузить уроки")
 			const allLessons = await resLessons.json()
 
-			// 2. Получаем данные пользователя (включая completedTheoryLessons)
+			// Получаем пользователя
 			const resUser = await getMe()
 			if (!resUser.ok) throw new Error("Не удалось загрузить пользователя")
+			const user = resUser.user
 
-			// 3. Отмечаем уроки как завершённые
-			const completedIds = new Set(resUser.user.completedTheoryLessons.map(l => l.id))
+			// Собираем ID пройденных теорий и практик
+			const theoryIds = new Set(user.completedTheoryLessons.map(t => t.id))
+			const practiceIds = new Set(user.completedPracticeLessons.map(p => p.id))
+
+			// Обрабатываем каждый урок
 			allLessons.forEach(lesson => {
-				lesson.completed = completedIds.has(lesson.id)
+				const theoryId = lesson.theory?.id
+				const practiceId = lesson.practice?.id
+
+				lesson.theoryCompleted = theoryId ? theoryIds.has(theoryId) : true
+				lesson.practiceCompleted = practiceId ? practiceIds.has(practiceId) : true
+				lesson.completed = lesson.theoryCompleted && lesson.practiceCompleted
 			})
 
 			lessons.value = allLessons
-
-			// 4. Выбираем первый непройденный
 			selectedLesson.value = lessons.value.find(lesson => !lesson.completed) || lessons.value[0]
 		} catch (err) {
 			console.error("Ошибка загрузки данных:", err)
@@ -68,8 +80,8 @@
 	provide("selectedLesson", selectedLesson)
 
 	const progress = computed(() => {
-		const completedLessons = lessons.value.filter(lesson => lesson.completed).length
-		return Math.round((completedLessons / lessons.value.length) * 100)
+		const completed = lessons.value.filter(l => l.completed).length
+		return Math.round((completed / lessons.value.length) * 100)
 	})
 
 	const selectLesson = lesson => {
@@ -78,10 +90,10 @@
 </script>
 
 <style scoped>
-    .pad-top-m {
-        padding-top: var(--pad-m);
-    }
-    
+	.pad-top-m {
+		padding-top: var(--pad-m);
+	}
+
 	.dashboard {
 		width: 100%;
 		height: 100%;

@@ -78,5 +78,24 @@ export const useAuth = () => {
         return data.completed
     }
 
-	return { isAuthenticated, login, logout, getRole, getToken, getMe, toggleComplete }
+    const togglePracticeComplete = async (id: Number) => {
+		const token = getToken()
+		const res = await fetch(`http://localhost:8000/practice-lessons/${id}/complete`, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ token }),
+		})
+
+		if (!res.ok) {
+			throw new Error("Не удалось изменить статус урока")
+		}
+
+		const data = await res.json()
+
+		return data.completed
+	}
+
+	return { isAuthenticated, login, logout, getRole, getToken, getMe, toggleComplete, togglePracticeComplete }
 }
