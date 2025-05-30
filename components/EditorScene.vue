@@ -74,6 +74,12 @@
 					<summary>Extras</summary>
 					<div class="extras-buttons">
 						<button
+							@click="setExtraMode('delete')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'delete', active: true }"
+						>
+							🗑️
+						</button>
+						<button
 							@click="setExtraMode('trafficlight')"
 							:class="{ selected: mode.name === 'extra' && mode.extraType === 'trafficlight', active: true }"
 						>
@@ -83,7 +89,7 @@
 							@click="setExtraMode('sign')"
 							:class="{ selected: mode.name === 'extra' && mode.extraType === 'sign', active: true }"
 						>
-							🚧
+							⛔
 						</button>
 						<button
 							@click="setExtraMode('crosswalk')"
@@ -92,10 +98,26 @@
 							🚶‍♂️
 						</button>
 						<button
+							@click="setExtraMode('fence')"
+							:class="{ selected: mode.name === 'extra' && mode.extraType === 'fence', active: true }"
+						>
+							🚧
+						</button>
+						<button
 							@click="setExtraMode('finish')"
 							:class="{ selected: mode.name === 'extra' && mode.extraType === 'finish', active: true }"
 						>
 							🏁
+						</button>
+					</div>
+					<div v-if="mode.name === 'extra' && mode.extraType !== 'delete'" class="rotation-buttons">
+						<button
+							v-for="angle in [0, 90, 180, 270]"
+							:key="angle"
+							@click="setExtraRotation(angle)"
+							:class="{ selected: mode.angle === angle }"
+						>
+							{{ angle }}°
 						</button>
 					</div>
 				</details>
@@ -157,7 +179,7 @@
 	const textureUrls = {
 		grass: import("../assets/images/grass.png"),
 		road: import("../assets/images/road.png"),
-        turning_road: import("../assets/images/turning_road.png"),
+		turning_road: import("../assets/images/turning_road.png"),
 		road_with_line: import("../assets/images/road_with_line.png"),
 		road_with_wide_line: import("../assets/images/road_with_wide_line.png"),
 		road_with_long_dashes: import("../assets/images/road_with_long_dashes.png"),
@@ -175,7 +197,7 @@
 		| { name: "idle" }
 		| { name: "grass" }
 		| { name: "road"; type: string; angle: number }
-		| { name: "extra"; extraType: "trafficlight" | "sign" | "crosswalk" | "finish" }
+		| { name: "extra"; extraType: "delete" | "trafficlight" | "sign" | "crosswalk" | "finish" | "fence"; angle: number }
 
 	const mode = ref<Mode>({ name: "idle" })
 	const editExtra = ref<Extra | null>(null)
@@ -230,11 +252,19 @@
 		}
 	}
 
-	function setExtraMode(extraType: "trafficlight" | "sign" | "crosswalk" | "finish") {
-		if (mode.value.name === "extra" && mode.value.extraType === extraType) {
+	function setExtraMode(extraType: "trafficlight" | "sign" | "crosswalk" | "finish" | "fence" | "delete") {
+		if (extraType === "delete") {
+			mode.value = { name: "extra", extraType: "delete", angle: 0 }
+		} else if (mode.value.name === "extra" && mode.value.extraType === extraType) {
 			mode.value = { name: "idle" }
 		} else {
-			mode.value = { name: "extra", extraType }
+			mode.value = { name: "extra", extraType, angle: 0 }
+		}
+	}
+
+	function setExtraRotation(angle: number) {
+		if (mode.value.name === "extra") {
+			mode.value.angle = angle
 		}
 	}
 
@@ -279,13 +309,22 @@
 		}
 
 		if (mode.value.name === "extra") {
+			if (mode.value.extraType === "delete") {
+				const index = level.extras.findIndex(e => e.position.x === x && e.position.y === y)
+				if (index !== -1) {
+					level.extras.splice(index, 1)
+					extrasLayer.removeChildAt(index)
+				}
+				return
+			}
+
 			let newExtra: Extra
 			switch (mode.value.extraType) {
 				case "trafficlight":
-					newExtra = { type: "trafficlight", position: { x, y }, angle: 0 }
+					newExtra = { type: "trafficlight", position: { x, y }, angle: mode.value.angle }
 					break
 				case "crosswalk":
-					newExtra = { type: "crosswalk", position: { x, y }, angle: slot.angle }
+					newExtra = { type: "crosswalk", position: { x, y }, angle: mode.value.angle }
 					break
 				case "sign":
 					newExtra = {
@@ -294,7 +333,7 @@
 						function: "",
 						radius: 10,
 						position: { x, y },
-						angle: 0,
+						angle: mode.value.angle,
 					}
 					break
 				case "finish":
@@ -304,18 +343,22 @@
 						function: "win",
 						radius: 10,
 						position: { x, y },
-						angle: 0,
+						angle: mode.value.angle,
 					}
 					break
+				case "fence":
+					newExtra = { type: "fence", position: { x, y }, angle: mode.value.angle }
+					break
 			}
+
 			const existingIndex = level.extras.findIndex(e => e.position.x === x && e.position.y === y)
-			if (existingIndex !== -1) {
+			if (existingIndex !== -1 && level.extras[existingIndex].type != "fence") {
 				level.extras.splice(existingIndex, 1)
 				extrasLayer.removeChildAt(existingIndex)
 			}
 			level.extras.push(newExtra)
 
-			// визуализация
+			// Визуализация
 			let marker: Sprite
 			const pos = slots.get(slot)
 			if (mode.value.extraType === "crosswalk") {
@@ -328,6 +371,41 @@
 						pos.x * textureSize * 0.5 + textureSize * 0.25,
 						pos.y * textureSize * 0.5 + textureSize * 0.25
 					)
+				}
+			} else if (mode.value.extraType === "fence") {
+				marker = new Sprite(Texture.WHITE)
+				marker.tint = 0x8b4513 // коричневый цвет
+				marker.width = textureSize * 0.5
+				marker.height = 3
+				marker.anchor.set(0.5, 0.5)
+
+				if (pos) {
+					let posX = pos.x * textureSize * 0.5 + textureSize * 0.5
+					let posY = pos.y * textureSize * 0.5 + textureSize * 0.5
+					let angle = 0
+
+					switch (newExtra.angle) {
+						case 0:
+							posX -= textureSize * 0.25
+							angle = 0
+							break
+						case 90:
+							posY -= textureSize * 0.25
+                            posX -= textureSize * 0.5
+							angle = 90
+							break
+						case 180:
+							posX -= textureSize * 0.25
+                            posY -= textureSize * 0.5
+							angle = 0
+							break
+						case 270:
+							posY -= textureSize * 0.25
+							angle = 90
+							break
+					}
+					marker.position.set(posX, posY)
+					marker.angle = angle
 				}
 			} else {
 				marker = new Sprite(Texture.WHITE)

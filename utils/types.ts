@@ -47,6 +47,11 @@ export type Extra =
 			position: Vector2Like
 			angle: number
 	  }
+	| {
+			type: "fence"
+			position: Vector2Like
+			angle: number
+	  }
 
 export type Goal = {
 	score: number

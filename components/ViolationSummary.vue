@@ -24,7 +24,7 @@
 	import { useRouter, useRoute } from "vue-router"
 	import { onMounted } from "vue"
     import { useAuth } from "@/composables/useAuth"
-    const { togglePracticeComplete } = useAuth()
+    const { togglePracticeComplete, getRole } = useAuth()
 
 	const props = defineProps<{
 		log: Record<string, number>
@@ -38,7 +38,7 @@
 	const hasViolations = Object.keys(props.log).length > 0
 
 	onMounted(() => {
-		if (!hasViolations) {
+		if (!hasViolations && getRole() != "admin") {
 			togglePracticeComplete(props.id)
 		}
 	})

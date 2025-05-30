@@ -24,14 +24,6 @@ export const useAuth = () => {
 		}
 	}
 
-	// const fetchUserProfile = async () => {
-	// 	if (!tokenCookie.value) return
-	// 	const res = await fetch("http://localhost:8000/profile", {
-	// 		headers: { Authorization: `Bearer ${tokenCookie.value}` },
-	// 	})
-	// 	if (res.ok) user.value = await res.json()
-	// }
-
 	const logout = () => {
 		tokenCookie.value = null
 		isAuthenticated.value = Boolean(tokenCookie.value)

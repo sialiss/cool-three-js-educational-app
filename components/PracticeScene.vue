@@ -8,12 +8,18 @@
 	</div>
 
 	<!-- Результат -->
-	<ViolationSummary v-if="showSummary" :log="violationLogObject" :id="Number(route.params.id)" @close="showSummary = false" />
+	<ViolationSummary
+		v-if="showSummary"
+		:log="violationLogObject"
+		:id="Number(route.params.id)"
+		@close="showSummary = false"
+	/>
 </template>
 
 <script setup lang="ts">
 	import { onMounted, ref } from "vue"
 	import * as THREE from "three"
+	import * as CANNON from "cannon-es"
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 	import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 	import { useRoute } from "vue-router"
@@ -48,11 +54,15 @@
 		road_for_crossroad: import("../assets/images/road_for_crossroad.png"),
 		crosswalk: import("../assets/images/crosswalk.png"),
 	}
-
+	const world = new CANNON.World()
+	world.gravity.set(0, -9.82, 0)
 	let scene: THREE.Scene
 	let camera: THREE.PerspectiveCamera
 	let renderer: THREE.WebGLRenderer
 	let car: THREE.Object3D
+	const carBody = new CANNON.Body({
+		mass: 1, // статическое тело, если не двигать его через физику
+	})
 	let wheels: Record<string, THREE.Object3D> = {}
 	let steeringWheel: THREE.Object3D
 	let controls: OrbitControls
@@ -132,6 +142,11 @@
 			car.position.set(width / 2, 0.1, length / 2)
 			scene.add(car)
 
+			const carShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1)) // примерные размеры
+			carBody.addShape(carShape)
+			carBody.position.set(car.position.x, car.position.y, car.position.z)
+			world.addBody(carBody)
+
 			wheels.Wheel1 = car.getObjectByName("Wheel1")!
 			wheels.Wheel2 = car.getObjectByName("Wheel2")!
 			wheels.Wheel3 = car.getObjectByName("Wheel3")!
@@ -151,8 +166,6 @@
 		{ name: "coolhouse", path: "../models/coolhouse.glb?url" },
 		{ name: "whitehouse", path: "../models/whitehouse.glb?url" },
 		{ name: "pinkhouse", path: "../models/pinkhouse.glb?url" },
-		{ name: "trafficlight", path: "../models/trafficlight.glb?url" },
-		{ name: "sign", path: "../models/sign.glb?url" },
 	]
 
 	const loadModels = async () => {
@@ -250,11 +263,11 @@
 			}
 		}
 
-		// Добавляем невидимые стены по границе
 		if (withWalls) {
 			const wallHeight = 2
 			const wallThickness = 0.1
 			const wallMaterial = new THREE.MeshBasicMaterial({ visible: false })
+			const wallPhysicsMaterial = new CANNON.Material("wallMaterial")
 
 			for (let y = 0; y < size.y; y++) {
 				;[
@@ -265,6 +278,12 @@
 					const wall = new THREE.Mesh(geometry, wallMaterial)
 					wall.position.set(x * tileSize, wallHeight / 2, y * tileSize)
 					scene.add(wall)
+
+					const shape = new CANNON.Box(new CANNON.Vec3(wallThickness / 2, wallHeight / 2, tileSize / 2))
+					const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial })
+					body.addShape(shape)
+					body.position.set(x * tileSize, wallHeight / 2, y * tileSize)
+					world.addBody(body)
 				})
 			}
 			for (let x = 0; x < size.x; x++) {
@@ -276,6 +295,12 @@
 					const wall = new THREE.Mesh(geometry, wallMaterial)
 					wall.position.set(x * tileSize, wallHeight / 2, y * tileSize)
 					scene.add(wall)
+
+					const shape = new CANNON.Box(new CANNON.Vec3(tileSize / 2, wallHeight / 2, wallThickness / 2))
+					const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial })
+					body.addShape(shape)
+					body.position.set(x * tileSize, wallHeight / 2, y * tileSize)
+					world.addBody(body)
 				})
 			}
 		}
@@ -359,6 +384,69 @@
 								pedlights.push(lightobj3)
 								getLightMaterials(lightobj1, lightobj3)
 							}
+							resolve()
+						},
+						undefined,
+						reject
+					)
+				})
+			} else if (type === "fence") {
+				await new Promise<void>((resolve, reject) => {
+					loader.load(
+						"../models/fence.glb?url",
+						gltf => {
+							const fence = gltf.scene
+							fence.scale.set(1, 1, 1)
+
+							// Позиционируем по центру тайла
+							let posX = pz
+							let posZ = px
+
+							// Смещение в зависимости от угла, чтобы встать вплотную к стороне
+							const offset = tileSize * 0.25
+							let rotY = 0
+
+							switch (extra.angle) {
+								case 0:
+									posX += offset
+									rotY = 0
+									break
+								case 90:
+									posZ += offset
+									rotY = Math.PI / 2
+									break
+								case 180:
+									posX -= offset
+									rotY = Math.PI
+									break
+								case 270:
+									posZ -= offset
+									rotY = -Math.PI / 2
+									break
+							}
+
+							fence.position.set(posX, 0, posZ)
+							fence.rotation.y = rotY + Math.PI / 2
+							scene.add(fence)
+
+							// === Вычисляем bounding box ===
+							const box = new THREE.Box3().setFromObject(fence)
+							const size = new THREE.Vector3()
+							box.getSize(size)
+
+							const wallWidth = tileSize * 0.5 // или подгони под модель, если нужно точнее
+							const wallHeight = size.y
+							const wallThickness = 0.1 // тонкая коллизия, как доска
+
+							// === Добавляем коллизию ===
+							const wallPhysicsMaterial = new CANNON.Material("wallMaterial")
+							const shape = new CANNON.Box(new CANNON.Vec3(tileSize / 2, wallHeight / 2, wallThickness / 2))
+							const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial })
+							body.addShape(shape)
+							body.position.set(posX, wallHeight / 2, posZ)
+                            body.quaternion.setFromEuler(0, rotY + Math.PI / 2, 0)
+							world.addBody(body)
+
 							resolve()
 						},
 						undefined,
@@ -573,6 +661,7 @@
 	const deceleration = 0.001
 	const maxSpeed = 0.4
 	const rotationSpeedFactor = 0.02
+	let isColliding = false
 	const updateCarMovement = (car: THREE.Object3D) => {
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
@@ -618,6 +707,24 @@
 		wheels.Wheel2.rotation.y += (targetSteerAngle - wheels.Wheel2.rotation.y) * steerReturnSpeed
 	}
 
+	carBody.addEventListener("collide", function (e: { body: any }) {
+		const otherBody = e.body
+		isColliding = true
+		// console.log("Столкновение с", otherBody)
+
+		// отталкивание машины назад
+		stopCarMovement()
+	})
+
+	const stopCarMovement = () => {
+		velocity = -acceleration * 10
+		const direction = new THREE.Vector3()
+		car.getWorldDirection(direction)
+		const movement = direction.clone().multiplyScalar(velocity)
+		car.position.add(movement)
+		isColliding = false
+	}
+
 	let lastFrameTime = 0
 	const fps = 60
 	const frameDuration = 1000 / fps
@@ -631,7 +738,15 @@
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
 
-		updateCarMovement(car)
+		if (!isColliding) {
+			// обновляем позицию машины
+			updateCarMovement(car)
+		}
+
+		carBody.position.set(car.position.x, car.position.y, car.position.z)
+		carBody.quaternion.set(car.quaternion.x, car.quaternion.y, car.quaternion.z, car.quaternion.w)
+
+		world.step(1 / 60)
 
 		for (const zone of signZones) {
 			const distance = car.position.distanceTo(zone.position)
