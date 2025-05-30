@@ -26,6 +26,7 @@
 	import type { Level } from "../utils/types"
 	import { trafficSigns } from "../utils/signs"
 	import { useAuth } from "@/composables/useAuth"
+	import { loadObject } from "../utils/modelLoader"
 
 	const route = useRoute()
 	const { getRole } = useAuth()
@@ -71,6 +72,7 @@
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
 	const isFirstPerson = ref(true)
 	const speed = ref(0)
+	const loader = new GLTFLoader()
 
 	let texturePromises: {
 		[k: string]: Promise<THREE.Texture>
@@ -78,7 +80,7 @@
 	let trafficlights: THREE.Object3D[] = []
 	let pedlights: THREE.Object3D[] = []
 	const signZones: {
-		sign: THREE.Group<THREE.Object3DEventMap>
+		sign: THREE.Object3D<THREE.Object3DEventMap>
 		radius: number
 		logic: string
 		position: THREE.Vector3
@@ -133,7 +135,6 @@
 			scene.add(skyDome)
 		})
 
-		const loader = new GLTFLoader()
 		loader.load("../models/Car3_3.glb?url", gltf => {
 			car = gltf.scene
 			car.scale.set(0.5, 0.5, 0.5)
@@ -169,7 +170,6 @@
 	]
 
 	const loadModels = async () => {
-		const loader = new GLTFLoader()
 		const promises = modelPaths.map(
 			info =>
 				new Promise<{ name: string; scene: THREE.Object3D; width: number }>((resolve, reject) => {
@@ -343,7 +343,6 @@
 	const drawExtras = async (extras: any[], scene: THREE.Scene) => {
 		const tileSize = 4
 		const texture = await texturePromises.crosswalk
-		const loader = new GLTFLoader()
 
 		for (const extra of extras) {
 			const { type, position } = extra
@@ -361,158 +360,122 @@
 					mesh.rotation.z = -THREE.MathUtils.degToRad(extra.angle) - Math.PI / 2
 				}
 			} else if (type === "trafficlight") {
-				await new Promise<void>((resolve, reject) => {
-					loader.load(
-						"../models/trafficlight.glb?url",
-						gltf => {
-							const light = gltf.scene
-							light.userData.name = "trafficLight"
-							light.scale.set(3.5, 3.5, 3.5)
-							// позиционируем в ЛЕВЫЙ ВЕРХНИЙ угол тайла
-							light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
-							light.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI
-							scene.add(light)
-							const lightobj1 = light.getObjectByName("trafficlight1")
-							const lightobj2 = light.getObjectByName("trafficlight2")
-							const lightobj3 = light.getObjectByName("trafficlight3")
+				const light = await loadObject(type)
+				light.userData.name = "trafficLight"
+				light.scale.set(3.5, 3.5, 3.5)
+				light.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
+				light.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI
+				scene.add(light)
 
-							if (lightobj1 && lightobj2 && lightobj3) {
-								lightobj1.userData.angle = extra.angle
-								lightobj2.userData.angle = extra.angle + 90
-								lightobj3.userData.angle = extra.angle
-								trafficlights.push(lightobj1, lightobj2)
-								pedlights.push(lightobj3)
-								getLightMaterials(lightobj1, lightobj3)
-							}
-							resolve()
-						},
-						undefined,
-						reject
-					)
-				})
+				const lightobj1 = light.getObjectByName("trafficlight1")
+				const lightobj2 = light.getObjectByName("trafficlight2")
+				const lightobj3 = light.getObjectByName("trafficlight3")
+
+				if (lightobj1 && lightobj2 && lightobj3) {
+					lightobj1.userData.angle = extra.angle
+					lightobj2.userData.angle = extra.angle + 90
+					lightobj3.userData.angle = extra.angle
+					trafficlights.push(lightobj1, lightobj2)
+					pedlights.push(lightobj3)
+					getLightMaterials(lightobj1, lightobj3)
+				}
 			} else if (type === "fence") {
-				await new Promise<void>((resolve, reject) => {
-					loader.load(
-						"../models/fence.glb?url",
-						gltf => {
-							const fence = gltf.scene
-							fence.scale.set(1, 1, 1)
+				const fence = await loadObject(type)
+				fence.scale.set(1, 1, 1)
 
-							// Позиционируем по центру тайла
-							let posX = pz
-							let posZ = px
+				let posX = pz
+				let posZ = px
+				const offset = tileSize * 0.25
+				let rotY = 0
 
-							// Смещение в зависимости от угла, чтобы встать вплотную к стороне
-							const offset = tileSize * 0.25
-							let rotY = 0
+				switch (extra.angle) {
+					case 0:
+						posX += offset
+						break
+					case 90:
+						posZ += offset
+						rotY = Math.PI / 2
+						break
+					case 180:
+						posX -= offset
+						rotY = Math.PI
+						break
+					case 270:
+						posZ -= offset
+						rotY = -Math.PI / 2
+						break
+				}
 
-							switch (extra.angle) {
-								case 0:
-									posX += offset
-									rotY = 0
-									break
-								case 90:
-									posZ += offset
-									rotY = Math.PI / 2
-									break
-								case 180:
-									posX -= offset
-									rotY = Math.PI
-									break
-								case 270:
-									posZ -= offset
-									rotY = -Math.PI / 2
-									break
-							}
+				fence.position.set(posX, 0, posZ)
+				fence.rotation.y = rotY + Math.PI / 2
+				scene.add(fence)
 
-							fence.position.set(posX, 0, posZ)
-							fence.rotation.y = rotY + Math.PI / 2
-							scene.add(fence)
+				const box = new THREE.Box3().setFromObject(fence)
+				const size = new THREE.Vector3()
+				box.getSize(size)
 
-							// === Вычисляем bounding box ===
-							const box = new THREE.Box3().setFromObject(fence)
-							const size = new THREE.Vector3()
-							box.getSize(size)
+				const wallHeight = size.y
+				const wallThickness = 0.1
 
-							const wallWidth = tileSize * 0.5 // или подгони под модель, если нужно точнее
-							const wallHeight = size.y
-							const wallThickness = 0.1 // тонкая коллизия, как доска
-
-							// === Добавляем коллизию ===
-							const wallPhysicsMaterial = new CANNON.Material("wallMaterial")
-							const shape = new CANNON.Box(new CANNON.Vec3(tileSize / 2, wallHeight / 2, wallThickness / 2))
-							const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial })
-							body.addShape(shape)
-							body.position.set(posX, wallHeight / 2, posZ)
-                            body.quaternion.setFromEuler(0, rotY + Math.PI / 2, 0)
-							world.addBody(body)
-
-							resolve()
-						},
-						undefined,
-						reject
-					)
-				})
+				const wallPhysicsMaterial = new CANNON.Material("wallMaterial")
+				const shape = new CANNON.Box(new CANNON.Vec3(tileSize / 2, wallHeight / 2, wallThickness / 2))
+				const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial })
+				body.addShape(shape)
+				body.position.set(posX, wallHeight / 2, posZ)
+				body.quaternion.setFromEuler(0, rotY + Math.PI / 2, 0)
+				world.addBody(body)
 			} else if (type === "sign") {
-				await new Promise<void>((resolve, reject) => {
-					loader.load(
-						"../models/sign.glb?url",
-						gltf => {
-							const sign = gltf.scene
-							const textureLoader = new THREE.TextureLoader()
-							const signinfo = trafficSigns.find(sign => sign.name === extra.name)
-							let texturePath
-							if (signinfo) {
-								texturePath = sign ? `../models/traffic_signs-01-3ds/${signinfo.texture}` : null
-							}
+				const originalSign = await loadObject(type)
 
-							if (texturePath) {
-								textureLoader.load(texturePath, texture => {
-									texture.flipY = false
-									// Найди дочерний меш, где нужно заменить текстуру
-									const targetChild = sign.children[0].children[0] // или другой нужный index
-									if (!(targetChild instanceof THREE.Mesh)) throw Error("uhhh not mesh")
-									targetChild.material.map = texture
-									targetChild.material.needsUpdate = true
-								})
-							}
+				// Клонируем объект и его материалы
+				const sign = originalSign.clone(true)
 
-							// Угол поворота
-							sign.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI / 2
-
-							sign.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
-							sign.userData = { type: "sign", logic: extra.function, radius: extra.radius }
-							scene.add(sign)
-
-							// Визуализация радиуса действия (можно скрыть позже)
-							if (extra.function) {
-								const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
-								const zoneMaterial = new THREE.MeshBasicMaterial({
-									color: 0x00ff00,
-									opacity: 0.2,
-									transparent: true,
-								})
-								const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
-								zone.position.set(pz, 0.005, px)
-								scene.add(zone)
-
-								// Проверка логики при пересечении:
-								signZones.push({
-									sign,
-									radius: extra.radius,
-									logic: extra.function,
-									position: new THREE.Vector3(pz, 0, px),
-									message: signinfo?.message,
-									entered: false,
-								})
-							}
-
-							resolve()
-						},
-						undefined,
-						reject
-					)
+				sign.traverse(obj => {
+					if ((obj as THREE.Mesh).isMesh) {
+						const mesh = obj as THREE.Mesh
+						mesh.material = (mesh.material as THREE.Material).clone()
+					}
 				})
+
+				const textureLoader = new THREE.TextureLoader()
+				const signinfo = trafficSigns.find(sign => sign.name === extra.name)
+
+				if (signinfo) {
+					const texturePath = `../models/traffic_signs-01-3ds/${signinfo.texture}`
+					textureLoader.load(texturePath, texture => {
+						texture.flipY = false
+						const targetChild = sign.children[0].children[0]
+						if (!(targetChild instanceof THREE.Mesh)) throw Error("uhhh not mesh")
+						;(targetChild.material as THREE.MeshStandardMaterial).map = texture
+						targetChild.material.needsUpdate = true
+					})
+				}
+
+				sign.rotation.y = -THREE.MathUtils.degToRad(extra.angle) + Math.PI / 2
+				sign.position.set(pz - tileSize / 2 + 0.5, 0, px - tileSize / 2 + 0.5)
+				sign.userData = { type: "sign", logic: extra.function, radius: extra.radius }
+				scene.add(sign)
+
+				if (extra.function) {
+					const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
+					const zoneMaterial = new THREE.MeshBasicMaterial({
+						color: 0x00ff00,
+						opacity: 0.2,
+						transparent: true,
+					})
+					const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
+					zone.position.set(pz, 0.005, px)
+					scene.add(zone)
+
+					signZones.push({
+						sign,
+						radius: extra.radius,
+						logic: extra.function,
+						position: new THREE.Vector3(pz, 0, px),
+						message: signinfo?.message,
+						entered: false,
+					})
+				}
 			}
 		}
 	}
