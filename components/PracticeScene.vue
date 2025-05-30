@@ -385,7 +385,7 @@
 
 				let posX = pz
 				let posZ = px
-				const offset = tileSize * 0.25
+				const offset = tileSize * 0.5
 				let rotY = 0
 
 				switch (extra.angle) {
@@ -393,7 +393,7 @@
 						posX += offset
 						break
 					case 90:
-						posZ += offset
+						posZ -= offset
 						rotY = Math.PI / 2
 						break
 					case 180:
@@ -401,7 +401,7 @@
 						rotY = Math.PI
 						break
 					case 270:
-						posZ -= offset
+						posZ += offset
 						rotY = -Math.PI / 2
 						break
 				}
@@ -415,7 +415,7 @@
 				box.getSize(size)
 
 				const wallHeight = size.y
-				const wallThickness = 0.1
+				const wallThickness = 0.3
 
 				const wallPhysicsMaterial = new CANNON.Material("wallMaterial")
 				const shape = new CANNON.Box(new CANNON.Vec3(tileSize / 2, wallHeight / 2, wallThickness / 2))
