@@ -372,8 +372,9 @@
 				mesh.rotation.x = -Math.PI / 2
 				mesh.position.set(pz, 0.015, px)
 				scene.add(mesh)
+                mesh.rotation.z = - Math.PI / 2
 				if (extra.angle) {
-					mesh.rotation.z = -THREE.MathUtils.degToRad(extra.angle) - Math.PI / 2
+					mesh.rotation.z += THREE.MathUtils.degToRad(extra.angle) 
 				}
 			} else if (type === "trafficlight") {
 				const light = await loadObject(type)
