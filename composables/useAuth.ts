@@ -20,7 +20,6 @@ export const useAuth = () => {
 			isAuthenticated.value = Boolean(tokenCookie.value)
 			roleCookie.value = data.role
 			console.log(data)
-			// await fetchUserProfile()
 		}
 	}
 
