@@ -34,6 +34,20 @@
 
 	const loadLevel = async () => {
 		const id = Number(route.params.id)
+		// if (!id) {
+		// 	levelData.value = {
+		// 		id: 0,
+		// 		title: "Meow",
+		// 		description: "meow",
+		// 		author: "",
+		// 		size: { x: 10, y: 10 },
+		// 		field: [[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}]],
+		// 		extras: [],
+		// 		goal: { score: 10000 },
+		// 		lessonId: 0
+		// 	}
+		// 	return
+		// }
 		const res = await fetch(`http://localhost:8000/practice-lessons/${id}`, {
 			headers: { "Content-Type": "application/json" },
 		})
@@ -67,12 +81,14 @@
 	let wheels: Record<string, THREE.Object3D> = {}
 	let steeringWheel: THREE.Object3D
 	let controls: OrbitControls
+	const wheelMaxAngle = Math.PI * 5 / 2
 	const kms = 300
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
 	const isFirstPerson = ref(true)
 	const speed = ref(0)
 	const loader = new GLTFLoader()
+	let gamepad: Gamepad|null = null
 
 	let texturePromises: {
 		[k: string]: Promise<THREE.Texture>
@@ -610,13 +626,18 @@
 		const maxSteeringAngle = Math.PI / 4
 		const turnSpeed = 0.05
 
-		// Целевой угол поворота
-		let targetAngle = 0
-		if (keys.a || keys.ф) targetAngle = maxSteeringAngle
-		if (keys.d || keys.в) targetAngle = -maxSteeringAngle
-
-		// Плавное приближение текущего угла к целевому
-		steeringWheel.rotation.z += (targetAngle - steeringWheel.rotation.z) * turnSpeed
+		if (gamepad) {
+			steeringWheel.rotation.z = gamepad.axes[0] * wheelMaxAngle
+		}
+		else {
+			// Целевой угол поворота
+			let targetAngle = 0
+			if (keys.a || keys.ф) targetAngle = maxSteeringAngle
+			if (keys.d || keys.в) targetAngle = -maxSteeringAngle
+	
+			// Плавное приближение текущего угла к целевому
+			steeringWheel.rotation.z += (targetAngle - steeringWheel.rotation.z) * turnSpeed
+		}
 	}
 
 	let velocity = 0
@@ -629,25 +650,40 @@
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
 
+
+
 		// Управление ускорением и замедлением
-		if (keys.w || keys.ц) {
-			velocity += acceleration
-		} else if (keys.s || keys.ы) {
-			velocity -= acceleration
-		} else {
-			if (velocity > 0 && velocity >= deceleration) velocity -= deceleration
-			if (velocity < 0 && velocity <= deceleration) velocity += deceleration
-			if (Math.abs(velocity) < deceleration) velocity = 0
+		if (gamepad) {
+			const gasInput = pedalToLinear(gamepad.axes[1]) * getGamepadGearDirection(gamepad)
+			const breakInput = pedalToLinear(gamepad.axes[2])
+			if (gasInput) velocity += gasInput * acceleration
+			// Замедление если нажат тормоз или не нажат газ
+			if (!gasInput || breakInput)
+				decelerate(breakInput)
+		}
+		else {
+			if (keys.w || keys.ц) {
+				velocity += acceleration
+			} else if (keys.s || keys.ы) {
+				velocity -= acceleration
+			} else {
+				decelerate()
+			}
 		}
 
 		velocity = Math.max(-maxSpeed, Math.min(maxSpeed, velocity))
 
 		// Поворот зависит от направления движения
-		if (keys.a || keys.ф) {
-			car.rotation.y += rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+		if (gamepad) {
+			car.rotation.y += -gamepad.axes[0] * rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
 		}
-		if (keys.d || keys.в) {
-			car.rotation.y -= rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+		else {
+			if (keys.a || keys.ф) {
+				car.rotation.y += rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+			}
+			if (keys.d || keys.в) {
+				car.rotation.y -= rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
+			}
 		}
 
 		// Перемещение
@@ -678,6 +714,29 @@
 		// отталкивание машины назад
 		stopCarMovement()
 	})
+
+	const getGamepadGearDirection = (gamepad: Gamepad) => {
+		// Реверс
+		if (gamepad.buttons[11].pressed) return -1
+		// Передачи с 1 по 6
+		if (
+			gamepad.buttons[12].pressed ||
+			gamepad.buttons[13].pressed ||
+			gamepad.buttons[14].pressed ||
+			gamepad.buttons[15].pressed ||
+			gamepad.buttons[16].pressed ||
+			gamepad.buttons[17].pressed
+		) return 1
+		// Нейтральная
+		return 0
+	}
+
+	const decelerate = (breakingFactor = 0) => {
+		const decelerationPower = deceleration * (1 + breakingFactor)
+		if (velocity > 0 && velocity >= deceleration) velocity -= decelerationPower
+		if (velocity < 0 && velocity <= deceleration) velocity += decelerationPower
+		if (Math.abs(velocity) < decelerationPower) velocity = 0
+	}
 
 	const stopCarMovement = () => {
 		velocity = -acceleration * 10
@@ -803,6 +862,10 @@
 		}
 	}
 
+	const pedalToLinear = (pedalInput: number) => {
+		return (1 - pedalInput) / 2
+	}
+
 	const onWindowResize = () => {
 		if (renderer && camera) {
 			const width = window.innerWidth
@@ -836,6 +899,24 @@
 				await drawExtras(levelData.value.extras, scene)
 			}
 		}
+
+		if ("getGamepads" in navigator) {
+			for (const gpad of navigator.getGamepads()) {
+				console.log(gpad)
+				if (!gpad) continue
+				gamepad = gpad
+				break
+			}
+			window.addEventListener("gamepadconnected", e => {
+				gamepad = e.gamepad
+				console.log(gamepad)
+			})
+			window.addEventListener("gamepaddisconnected", e => {
+				if (e.gamepad == gamepad) gamepad = null
+				console.log(gamepad)
+			})
+		}
+
 		window.addEventListener("keydown", handleKeyDown)
 		window.addEventListener("keyup", handleKeyUp)
 		window.addEventListener("resize", onWindowResize)
