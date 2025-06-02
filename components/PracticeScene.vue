@@ -270,9 +270,9 @@
 				const mesh = new THREE.Mesh(geometry, material)
 				mesh.rotation.x = -Math.PI / 2
 				mesh.position.set(y * tileSize, 0.01, x * tileSize)
-
+                mesh.rotation.z = - Math.PI / 2
 				if (tile.angle) {
-					mesh.rotation.z = -THREE.MathUtils.degToRad(tile.angle) - Math.PI / 2
+					mesh.rotation.z += THREE.MathUtils.degToRad(tile.angle) 
 				}
 
 				scene.add(mesh)
