@@ -477,7 +477,7 @@
 					const zoneGeometry = new THREE.CylinderGeometry(extra.radius, extra.radius, 0.01, 32)
 					const zoneMaterial = new THREE.MeshBasicMaterial({
 						color: 0x00ff00,
-						opacity: 0.2,
+						opacity: 0,
 						transparent: true,
 					})
 					const zone = new THREE.Mesh(zoneGeometry, zoneMaterial)
@@ -650,8 +650,6 @@
 	const updateCarMovement = (car: THREE.Object3D) => {
 		const direction = new THREE.Vector3()
 		car.getWorldDirection(direction)
-
-
 
 		// Управление ускорением и замедлением
 		if (gamepad) {

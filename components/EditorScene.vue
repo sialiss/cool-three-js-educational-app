@@ -22,10 +22,10 @@
 					</div>
 				</details>
 				<details open>
-					<summary>Targets</summary>
+					<summary>Цели</summary>
 					<div>
 						<div>
-							<label for="goal-score">Score</label>
+							<label for="goal-score">Счёт</label>
 							<input
 								id="goal-score"
 								type="number"
@@ -39,7 +39,7 @@
 					</div>
 				</details>
 				<details open>
-					<summary>Modes</summary>
+					<summary>Режимы</summary>
 					<div class="modes">
 						<div class="mode-buttons">
 							<!-- Кнопки выбора дороги -->
@@ -71,7 +71,7 @@
 					</div>
 				</details>
 				<details open>
-					<summary>Extras</summary>
+					<summary>Дополнительные объекты</summary>
 					<div class="extras-buttons">
 						<button
 							@click="setExtraMode('delete')"
@@ -353,8 +353,13 @@
 
 			const existingIndex = level.extras.findIndex(e => e.position.x === x && e.position.y === y)
 			if (existingIndex !== -1 && level.extras[existingIndex].type != "fence") {
-				level.extras.splice(existingIndex, 1)
-				extrasLayer.removeChildAt(existingIndex)
+				if (
+					level.extras[existingIndex].type == "crosswalk" &&
+					level.extras[existingIndex].type == mode.value.extraType
+				) {
+					level.extras.splice(existingIndex, 1)
+					extrasLayer.removeChildAt(existingIndex)
+				}
 			}
 			level.extras.push(newExtra)
 
@@ -391,12 +396,12 @@
 							break
 						case 90:
 							posY -= textureSize * 0.25
-                            posX -= textureSize * 0.5
+							posX -= textureSize * 0.5
 							angle = 90
 							break
 						case 180:
 							posX -= textureSize * 0.25
-                            posY -= textureSize * 0.5
+							posY -= textureSize * 0.5
 							angle = 0
 							break
 						case 270:
@@ -544,6 +549,12 @@
 </script>
 
 <style>
+	.extras-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
 	.horizontalContainer {
 		/* width: 100%;
 		height: 100%; */

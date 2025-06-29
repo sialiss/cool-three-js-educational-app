@@ -1,23 +1,25 @@
 {
-  "name": "nuxt-app",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
-  },
-  "dependencies": {
-    "@bbob/html": "^4.2.0",
-    "@bbob/preset-html5": "^4.2.0",
-    "@types/three": "^0.172.0",
-    "cannon-es": "^0.20.0",
-    "nuxt": "^3.15.3",
-    "pixi.js": "^8.9.2",
-    "three": "^0.172.0",
-    "vue": "latest",
-    "vue-router": "latest"
-  }
+	"name": "nuxt-app",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "nuxt build",
+		"dev": "nuxt dev",
+		"generate": "nuxt generate",
+		"preview": "nuxt preview",
+		"postinstall": "nuxt prepare",
+		"deploy": "node ./gh-pages.js"
+	},
+	"dependencies": {
+		"@bbob/html": "^4.2.0",
+		"@bbob/preset-html5": "^4.2.0",
+		"@types/three": "^0.172.0",
+		"cannon-es": "^0.20.0",
+		"gh-pages": "^6.3.0",
+		"nuxt": "^3.15.3",
+		"pixi.js": "^8.9.2",
+		"three": "^0.172.0",
+		"vue": "latest",
+		"vue-router": "latest"
+	}
 }
