@@ -1,6 +1,7 @@
 <!-- для билда в гитхаб странички
-npm run generate
-npm run deploy -->
+$env:VITE_DEPLOY_ENV='GH_PAGES'; npm run generate в консоль
+npm run deploy 
+-->
 
 <!-- # Nuxt Minimal Starter
 
