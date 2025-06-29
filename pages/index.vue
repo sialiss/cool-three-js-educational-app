@@ -14,7 +14,7 @@
 				</div>
 			</div>
 			<div class="image-block">
-				<img src="../assets/images/undraw_vintage_q09n.svg" alt="Обучение в автошколе" />
+				<img src="../assets/images/vintage.svg" alt="Обучение в автошколе" />
 			</div>
 		</section>
 
@@ -23,17 +23,17 @@
 			<h2 class="text-center">Почему выбирают нас?</h2>
 			<div class="flex wrap gap-m just-center">
 				<div class="feature-card">
-					<img src="../assets/images/undraw_right-direction_arvo.svg" alt="Интерактивность" />
+					<img src="../assets/images/direction.svg" alt="Интерактивность" />
 					<h3>Интерактивные уроки</h3>
 					<p>Увлекательные модули для лучшего понимания ПДД и ситуаций на дороге.</p>
 				</div>
 				<div class="feature-card">
-					<img src="../assets/images/undraw_team-effort_2mrb.svg" alt="Прогресс" />
+					<img src="../assets/images/team-effort.svg" alt="Прогресс" />
 					<h3>Контроль прогресса</h3>
 					<p>Отслеживайте успехи и проходите обучение в удобном темпе.</p>
 				</div>
 				<div class="feature-card">
-					<img src="../assets/images/undraw_hello_ccwj.svg" alt="Поддержка" />
+					<img src="../assets/images/hello.svg" alt="Поддержка" />
 					<h3>Поддержка преподавателей</h3>
 					<p>Наши инструкторы помогут вам на каждом этапе обучения.</p>
 				</div>
