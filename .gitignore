@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+gh-pages.js
 
 # Node dependencies
 node_modules
