@@ -4,15 +4,33 @@ export const useAuth = () => {
 	const tokenCookie = useCookie("token")
 	const isAuthenticated = useState("auth", () => Boolean(tokenCookie.value))
 	const roleCookie = useCookie("role")
+	const isServerOff = useState("server-off", () => false)
+    const isOffline = useState("login-off", () => false)
+
+	const checkServerStatus = async () => {
+		try {
+			const res = await fetch("http://localhost:8000/ping")
+			isServerOff.value = !res.ok
+		} catch (e) {
+			isServerOff.value = true
+		}
+	}
 
 	const login = async (email: string, password: string) => {
-		const res = await fetch("http://localhost:8000/user/login", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ login: email, password }),
-		})
+		let data
+		checkServerStatus()
+        isOffline.value = isServerOff.value
+		if (!isServerOff) {
+			const res = await fetch("http://localhost:8000/user/login", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ login: email, password }),
+			})
+			data = await res.json()
+		} else {
+			data = { ok: true, token: "faketoken", role: "admin" }
+		}
 
-		const data = await res.json()
 		if (!data.ok) {
 			throw new Error(data.text || "Ошибка авторизации")
 		} else {
@@ -46,12 +64,12 @@ export const useAuth = () => {
 				Authorization: `Bearer ${token}`,
 			},
 		})
-        const user = await res.json()
+		const user = await res.json()
 		return user
 	}
 
-    const toggleComplete = async (id: Number) => {
-        const token = getToken()
+	const toggleComplete = async (id: Number) => {
+		const token = getToken()
 		const res = await fetch(`http://localhost:8000/theory-lessons/${id}/complete`, {
 			method: "PUT",
 			headers: {
@@ -64,12 +82,12 @@ export const useAuth = () => {
 			throw new Error("Не удалось изменить статус урока")
 		}
 
-        const data = await res.json()
+		const data = await res.json()
 
-        return data.completed
-    }
+		return data.completed
+	}
 
-    const togglePracticeComplete = async (id: Number) => {
+	const togglePracticeComplete = async (id: Number) => {
 		const token = getToken()
 		const res = await fetch(`http://localhost:8000/practice-lessons/${id}/complete`, {
 			method: "PUT",
@@ -88,5 +106,17 @@ export const useAuth = () => {
 		return data.completed
 	}
 
-	return { isAuthenticated, login, logout, getRole, getToken, getMe, toggleComplete, togglePracticeComplete }
+	return {
+		isAuthenticated,
+		isServerOff,
+        isOffline,
+		checkServerStatus,
+		login,
+		logout,
+		getRole,
+		getToken,
+		getMe,
+		toggleComplete,
+		togglePracticeComplete,
+	}
 }

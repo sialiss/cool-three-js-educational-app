@@ -2,7 +2,8 @@
 	import { useAuth } from "@/composables/useAuth" // Файл кастомного хука
 	import { useRouter } from "vue-router"
 
-	const { logout, isAuthenticated, getRole } = useAuth()
+	const { logout, isAuthenticated, isOffline, isServerOff, checkServerStatus, getRole } = useAuth()
+    checkServerStatus()
 	const router = useRouter()
 
 	const handleLogout = async () => {
@@ -13,11 +14,19 @@
 
 <template>
 	<div class="minimenu">
-		<div class="account">
-			<NuxtLink v-if="!isAuthenticated" to="/login">Войти</NuxtLink>
-			<!-- <NuxtLink v-if="isAuthenticated" :to="{ path: '/login', query: { loggedOut: true } }">Выйти</NuxtLink> -->
-			<a v-if="isAuthenticated" href="#" @click.prevent="handleLogout">Выйти</a>
+		<div class="topstring">
+			<div>
+                <div v-if="!isAuthenticated && isServerOff">Сервер недоступен. Вы можете зайти как администратор введя любые данные.</div>
+                <div v-if="isAuthenticated && isServerOff && isOffline">Вы в режиме без доступа к серверу.</div>
+                <div v-if="isAuthenticated && !isServerOff && isOffline">Вы в режиме без доступа к серверу. Перезайдите, чтобы взаимодействовать с сервером.</div>
+			</div>
+			<div class="account">
+				<NuxtLink v-if="!isAuthenticated" to="/login">Войти</NuxtLink>
+				<!-- <NuxtLink v-if="isAuthenticated" :to="{ path: '/login', query: { loggedOut: true } }">Выйти</NuxtLink> -->
+				<a v-if="isAuthenticated" href="#" @click.prevent="handleLogout">Выйти</a>
+			</div>
 		</div>
+
 		<nav class="navbar pad-m">
 			<ul>
 				<li>
@@ -38,6 +47,10 @@
 </template>
 
 <style>
+    .topstring {
+        display: flex;
+        justify-content: space-between;
+    }
 	.minimenu {
 		top: 0;
 		left: 0;
