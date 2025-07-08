@@ -29,30 +29,26 @@
 	import { loadObject } from "../utils/modelLoader"
 
 	const route = useRoute()
-	const { getRole } = useAuth()
+	const { getRole, isOffline } = useAuth()
 	const levelData = ref<Level | null>(null)
 
 	const loadLevel = async () => {
 		const id = Number(route.params.id)
-		// if (!id) {
-		// 	levelData.value = {
-		// 		id: 0,
-		// 		title: "Meow",
-		// 		description: "meow",
-		// 		author: "",
-		// 		size: { x: 10, y: 10 },
-		// 		field: [[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}],[{type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}, {type:"grass", angle: 0}]],
-		// 		extras: [],
-		// 		goal: { score: 10000 },
-		// 		lessonId: 0
-		// 	}
-		// 	return
-		// }
-		const res = await fetch(`http://localhost:8000/practice-lessons/${id}`, {
-			headers: { "Content-Type": "application/json" },
-		})
-		const data = await res.json()
-		levelData.value = data.lesson
+		let lesson
+		if (!isOffline) {
+			const res = await fetch(`http://localhost:8000/practice-lessons/${id}`, {
+				headers: { "Content-Type": "application/json" },
+			})
+			const data = await res.json()
+			lesson = data.lesson
+		} else {
+			const localRes = await fetch(`/data/lessons.json`)
+			if (!localRes.ok) throw new Error("Локальный файл не найден")
+			const allLessons = await localRes.json()
+			const lessons = allLessons.filter((lesson: { practice: any }) => lesson.practice).map((lesson: { practice: any }) => lesson.practice)
+			lesson = lessons.find((l: { id: number }) => l.id === id)
+		}
+		levelData.value = lesson
 		console.log(levelData.value)
 	}
 
@@ -81,14 +77,14 @@
 	let wheels: Record<string, THREE.Object3D> = {}
 	let steeringWheel: THREE.Object3D
 	let controls: OrbitControls
-	const wheelMaxAngle = Math.PI * 5 / 2
+	const wheelMaxAngle = (Math.PI * 5) / 2
 	const kms = 300
 	const threeCanvas = ref<HTMLDivElement | null>(null)
 	const keys = { w: false, ц: false, a: false, ф: false, s: false, ы: false, d: false, в: false }
 	const isFirstPerson = ref(true)
 	const speed = ref(0)
 	const loader = new GLTFLoader()
-	let gamepad: Gamepad|null = null
+	let gamepad: Gamepad | null = null
 
 	let texturePromises: {
 		[k: string]: Promise<THREE.Texture>
@@ -270,9 +266,9 @@
 				const mesh = new THREE.Mesh(geometry, material)
 				mesh.rotation.x = -Math.PI / 2
 				mesh.position.set(y * tileSize, 0.01, x * tileSize)
-                mesh.rotation.z = - Math.PI / 2
+				mesh.rotation.z = -Math.PI / 2
 				if (tile.angle) {
-					mesh.rotation.z += THREE.MathUtils.degToRad(tile.angle) 
+					mesh.rotation.z += THREE.MathUtils.degToRad(tile.angle)
 				}
 
 				scene.add(mesh)
@@ -372,9 +368,9 @@
 				mesh.rotation.x = -Math.PI / 2
 				mesh.position.set(pz, 0.015, px)
 				scene.add(mesh)
-                mesh.rotation.z = - Math.PI / 2
+				mesh.rotation.z = -Math.PI / 2
 				if (extra.angle) {
-					mesh.rotation.z += THREE.MathUtils.degToRad(extra.angle) 
+					mesh.rotation.z += THREE.MathUtils.degToRad(extra.angle)
 				}
 			} else if (type === "trafficlight") {
 				const light = await loadObject(type)
@@ -629,13 +625,12 @@
 
 		if (gamepad) {
 			steeringWheel.rotation.z = gamepad.axes[0] * wheelMaxAngle
-		}
-		else {
+		} else {
 			// Целевой угол поворота
 			let targetAngle = 0
 			if (keys.a || keys.ф) targetAngle = maxSteeringAngle
 			if (keys.d || keys.в) targetAngle = -maxSteeringAngle
-	
+
 			// Плавное приближение текущего угла к целевому
 			steeringWheel.rotation.z += (targetAngle - steeringWheel.rotation.z) * turnSpeed
 		}
@@ -657,10 +652,8 @@
 			const breakInput = pedalToLinear(gamepad.axes[2])
 			if (gasInput) velocity += gasInput * acceleration
 			// Замедление если нажат тормоз или не нажат газ
-			if (!gasInput || breakInput)
-				decelerate(breakInput)
-		}
-		else {
+			if (!gasInput || breakInput) decelerate(breakInput)
+		} else {
 			if (keys.w || keys.ц) {
 				velocity += acceleration
 			} else if (keys.s || keys.ы) {
@@ -675,8 +668,7 @@
 		// Поворот зависит от направления движения
 		if (gamepad) {
 			car.rotation.y += -gamepad.axes[0] * rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
-		}
-		else {
+		} else {
 			if (keys.a || keys.ф) {
 				car.rotation.y += rotationSpeedFactor * (velocity >= 0 ? 1 : -1)
 			}
@@ -725,7 +717,8 @@
 			gamepad.buttons[15].pressed ||
 			gamepad.buttons[16].pressed ||
 			gamepad.buttons[17].pressed
-		) return 1
+		)
+			return 1
 		// Нейтральная
 		return 0
 	}

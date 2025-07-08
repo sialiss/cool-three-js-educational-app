@@ -104,6 +104,7 @@
 				{ "type": "fence", "angle": 0, "position": { "x": 16, "y": 5 } },
 				{ "type": "fence", "angle": 270, "position": { "x": 16, "y": 5 } },
 				{ "type": "fence", "angle": 180, "position": { "x": 16, "y": 4 } },
+				{ "type": "fence", "angle": 270, "position": { "x": 16, "y": 4 } },
 				{
 					"name": "Финиш",
 					"type": "sign",
@@ -116,20 +117,12 @@
 				{ "type": "trafficlight", "angle": 0, "position": { "x": 6, "y": 11 } },
 				{ "type": "trafficlight", "angle": 180, "position": { "x": 6, "y": 10 } },
 				{
-					"name": "Въезд запрещён",
+					"name": "Ограничение скорости 50",
 					"type": "sign",
 					"angle": 180,
 					"radius": 10,
-					"function": "",
+					"function": "speed<=50",
 					"position": { "x": 7, "y": 11 }
-				},
-				{
-					"name": "Въезд запрещён",
-					"type": "sign",
-					"angle": 0,
-					"radius": 10,
-					"function": "",
-					"position": { "x": 5, "y": 10 }
 				},
 				{
 					"name": "Ограничение скорости 50",
