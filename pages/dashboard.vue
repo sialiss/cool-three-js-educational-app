@@ -36,24 +36,35 @@
 	import LessonDescription from "~/components/LessonDescription.vue"
 	import { useAuth } from "@/composables/useAuth"
 
-	const { getRole, getMe } = useAuth()
+	const { getRole, getMe, isOffline } = useAuth()
 
 	const lessons = ref([])
 	const selectedLesson = ref(null)
 
 	onMounted(async () => {
 		try {
-			// Получаем уроки
-			const resLessons = await fetch("http://localhost:8000/lessons/", {
-				headers: { "Content-Type": "application/json" },
-			})
-			if (!resLessons.ok) throw new Error("Не удалось загрузить уроки")
-			const allLessons = await resLessons.json()
+            let allLessons;
+            let user;
+            console.log(isOffline.value)
+			if (!isOffline.value) {
+				// Получаем уроки
+				const resLessons = await fetch("http://localhost:8000/lessons/", {
+					headers: { "Content-Type": "application/json" },
+				})
+				if (!resLessons.ok) throw new Error("Не удалось загрузить уроки")
+				allLessons = await resLessons.json()
 
-			// Получаем пользователя
-			const resUser = await getMe()
-			if (!resUser.ok) throw new Error("Не удалось загрузить пользователя")
-			const user = resUser.user
+				// Получаем пользователя
+				const resUser = await getMe()
+				if (!resUser.ok) throw new Error("Не удалось загрузить пользователя")
+				user = resUser.user
+			} else {
+                const resLessons = await fetch("/data/lessons.json")
+                allLessons = await resLessons.json()
+                const users  = await fetch("/data/users.json")
+                const resUser = await users.json()
+                user = resUser[0]
+            }
 
 			// Собираем ID пройденных теорий и практик
 			const theoryIds = new Set(user.completedTheoryLessons.map(t => t.id))

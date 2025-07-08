@@ -1,5 +1,5 @@
 <template>
-	<div :class="['main', { 'practice-full-height': isPracticeFullHeight }]">
+	<div :class="['main', { 'full100vh-height': isFullHeight }]">
 		<Menu />
 		<slot />
 	</div>
@@ -12,7 +12,7 @@
 
 	const route = useRoute()
 
-	const isPracticeFullHeight = computed(() => route.meta?.practiceFullHeight === true)
+	const isFullHeight = computed(() => route.meta?.fullHeight === true)
 </script>
 
 <style>
@@ -22,8 +22,8 @@
 		height: auto;
 	}
 
-	/* Только для practice-страницы */
-	.practice-full-height {
+	/* Только для практики и редактора */
+	.full100vh-height {
 		height: 100vh;
 	}
 </style>

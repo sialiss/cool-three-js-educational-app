@@ -7,7 +7,7 @@
 <script setup>
 	definePageMeta({
 		layout: "default",
-		practiceFullHeight: true,
+		fullHeight: true,
 	})
 </script>
 

@@ -76,6 +76,9 @@
 <script setup>
 	import { ref, onMounted } from "vue"
 	import UserDetails from "~/components/UserDetails.vue"
+	import { useAuth } from "@/composables/useAuth"
+
+	const { isOffline } = useAuth()
 
 	const users = ref([])
 	const groups = ref([])

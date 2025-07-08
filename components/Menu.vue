@@ -5,6 +5,7 @@
 	const { logout, isAuthenticated, isOffline, isServerOff, checkServerStatus, getRole } = useAuth()
     checkServerStatus()
 	const router = useRouter()
+    console.log(isAuthenticated.value, isOffline.value, isServerOff.value)
 
 	const handleLogout = async () => {
 		logout()

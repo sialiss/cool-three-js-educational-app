@@ -4,8 +4,8 @@ export const useAuth = () => {
 	const tokenCookie = useCookie("token")
 	const isAuthenticated = useState("auth", () => Boolean(tokenCookie.value))
 	const roleCookie = useCookie("role")
-	const isServerOff = useState("server-off", () => false)
-    const isOffline = useState("login-off", () => false)
+	const isServerOff = useState("server-off", () => true)
+	const isOffline = useState("login-off", () => (tokenCookie.value == "faketoken" ? true : false))
 
 	const checkServerStatus = async () => {
 		try {
@@ -18,9 +18,7 @@ export const useAuth = () => {
 
 	const login = async (email: string, password: string) => {
 		let data
-		checkServerStatus()
-        isOffline.value = isServerOff.value
-		if (!isServerOff) {
+		if (!isServerOff.value) {
 			const res = await fetch("http://localhost:8000/user/login", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -109,7 +107,7 @@ export const useAuth = () => {
 	return {
 		isAuthenticated,
 		isServerOff,
-        isOffline,
+		isOffline,
 		checkServerStatus,
 		login,
 		logout,

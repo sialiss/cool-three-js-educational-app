@@ -12,6 +12,10 @@
 			EditorScene,
 		},
 	}
+    definePageMeta({
+		layout: "default",
+		fullHeight: true,
+	})
 </script>
 
 <style scoped>

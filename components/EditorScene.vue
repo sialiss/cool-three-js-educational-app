@@ -21,7 +21,7 @@
 						<button @click="showModal = true">Создать новый</button>
 					</div>
 				</details>
-				<details open>
+				<!-- <details open>
 					<summary>Цели</summary>
 					<div>
 						<div>
@@ -37,7 +37,7 @@
 							/>
 						</div>
 					</div>
-				</details>
+				</details> -->
 				<details open>
 					<summary>Режимы</summary>
 					<div class="modes">
@@ -556,8 +556,8 @@
 	}
 
 	.horizontalContainer {
-		/* width: 100%;
-		height: 100%; */
+		/* width: 100%; */
+		height: 90%;
 		margin-top: 1rem;
 		display: flex;
 	}

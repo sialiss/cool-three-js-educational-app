@@ -5,7 +5,7 @@
 			<div class="lesson-text" v-html="formattedLesson"></div>
 			<div class="buttons">
 				<button v-if="prevLesson" @click="goToPrevLesson">Назад</button>
-				<button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button>
+				<!-- <button @click="goToPractice(lesson.id)" class="secondary">Открыть практику</button> -->
 				<button @click="goList">К списку</button>
 				<button
 					v-if="getRole() == 'user'"
@@ -74,6 +74,7 @@
 
 	onMounted(async () => {
 		try {
+			// Пытаемся загрузить с сервера
 			const res = await fetch(`http://localhost:8000/theory-lessons/`, {
 				headers: {
 					"Content-Type": "application/json",
@@ -83,12 +84,31 @@
 			if (!res.ok) throw new Error("Не удалось загрузить уроки")
 
 			lessons = await res.json()
-			lesson.value = lessons.find(l => l.id === Number(route.params.id))
-			if (lesson.value?.content) {
-				lessonContent.value = lesson.value.content
-			}
 		} catch (err) {
-			console.error("Ошибка загрузки уроков:", err)
+			console.warn("Сервер недоступен, загружаем локальные уроки:", err)
+			try {
+				const localRes = await fetch(`/data/lessons.json`)
+				if (!localRes.ok) throw new Error("Локальный файл не найден")
+
+				const allLessons = await localRes.json()
+
+				// Извлекаем только теории
+				lessons = allLessons
+					.filter(lesson => lesson.theory)
+					.map(lesson => ({
+						...lesson.theory,
+						lesson: { title: lesson.title, description: lesson.description },
+					}))
+			} catch (localErr) {
+				console.error("Ошибка загрузки локальных данных:", localErr)
+				return
+			}
+		}
+
+		// Находим теоретический урок по ID
+		lesson.value = lessons.find(l => l.id === Number(route.params.id))
+		if (lesson.value?.content) {
+			lessonContent.value = lesson.value.content
 		}
 	})
 

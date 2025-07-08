@@ -141,7 +141,7 @@
 		scene.add(directionalLight)
 
 		const textureLoader = new THREE.TextureLoader()
-		textureLoader.load("../images/Skyboxes/BlueSkySkybox.png", texture => {
+		textureLoader.load("../images/BlueSkySkybox.png", texture => {
 			const geometry = new THREE.SphereGeometry(500, 60, 40)
 			const material = new THREE.MeshBasicMaterial({
 				map: texture,
