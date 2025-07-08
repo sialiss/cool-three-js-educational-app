@@ -80,6 +80,8 @@
 
 	const { isOffline } = useAuth()
 
+	const config = useRuntimeConfig()
+
 	const users = ref([])
 	const groups = ref([])
 	const selectedGroup = ref("")
@@ -109,7 +111,10 @@
 			let usersData, groupsData
 
 			if (isOffline.value) {
-				const [usersRes, groupsRes] = await Promise.all([fetch("/data/users.json"), fetch("/data/groups.json")])
+				const [usersRes, groupsRes] = await Promise.all([
+					fetch(`${config.app.baseURL}data/users.json`),
+					fetch(`${config.app.baseURL}data/groups.json`),
+				])
 				usersData = await usersRes.json()
 				groupsData = await groupsRes.json()
 
@@ -148,7 +153,7 @@
 		try {
 			let res
 			if (isOffline.value) {
-				res = await fetch("/data/groups.json")
+				res = await fetch(`${config.app.baseURL}data/groups.json`)
 			} else {
 				res = await fetch("http://localhost:8000/group")
 			}

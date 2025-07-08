@@ -31,6 +31,7 @@
 	const route = useRoute()
 	const { getRole, isOffline } = useAuth()
 	const levelData = ref<Level | null>(null)
+	const config = useRuntimeConfig()
 
 	const loadLevel = async () => {
 		const id = Number(route.params.id)
@@ -42,10 +43,12 @@
 			const data = await res.json()
 			lesson = data.lesson
 		} else {
-			const localRes = await fetch(`/data/lessons.json`)
+			const localRes = await fetch(`${config.app.baseURL}data/lessons.json`)
 			if (!localRes.ok) throw new Error("Локальный файл не найден")
 			const allLessons = await localRes.json()
-			const lessons = allLessons.filter((lesson: { practice: any }) => lesson.practice).map((lesson: { practice: any }) => lesson.practice)
+			const lessons = allLessons
+				.filter((lesson: { practice: any }) => lesson.practice)
+				.map((lesson: { practice: any }) => lesson.practice)
 			lesson = lessons.find((l: { id: number }) => l.id === id)
 		}
 		levelData.value = lesson

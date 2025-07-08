@@ -2,10 +2,13 @@ import { useState, useCookie } from "#app"
 
 export const useAuth = () => {
 	const tokenCookie = useCookie("token")
-	const isAuthenticated = useState("auth", () => Boolean(tokenCookie.value))
+	const isAuthenticated = useState("auth")
+	isAuthenticated.value = Boolean(tokenCookie.value)
 	const roleCookie = useCookie("role")
-	const isServerOff = useState("server-off", () => true)
-	const isOffline = useState("login-off", () => (tokenCookie.value == "faketoken" ? true : false))
+	const isServerOff = useState("server-off")
+	isServerOff.value = true
+	const isOffline = useState("login-off")
+	isOffline.value = tokenCookie.value == "faketoken" ? true : false
 
 	const checkServerStatus = async () => {
 		try {

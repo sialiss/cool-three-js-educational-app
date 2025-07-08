@@ -35,6 +35,7 @@
 	import { ref, computed, onMounted, provide } from "vue"
 	import LessonDescription from "~/components/LessonDescription.vue"
 	import { useAuth } from "@/composables/useAuth"
+	const config = useRuntimeConfig()
 
 	const { getRole, getMe, isOffline } = useAuth()
 
@@ -43,9 +44,9 @@
 
 	onMounted(async () => {
 		try {
-            let allLessons;
-            let user;
-            console.log(isOffline.value)
+			let allLessons
+			let user
+			console.log(isOffline.value)
 			if (!isOffline.value) {
 				// Получаем уроки
 				const resLessons = await fetch("http://localhost:8000/lessons/", {
@@ -59,12 +60,12 @@
 				if (!resUser.ok) throw new Error("Не удалось загрузить пользователя")
 				user = resUser.user
 			} else {
-                const resLessons = await fetch("/data/lessons.json")
-                allLessons = await resLessons.json()
-                const users  = await fetch("/data/users.json")
-                const resUser = await users.json()
-                user = resUser[0]
-            }
+				const resLessons = await fetch(`${config.app.baseURL}data/lessons.json`)
+				allLessons = await resLessons.json()
+				const users = await fetch(`${config.app.baseURL}data/users.json`)
+				const resUser = await users.json()
+				user = resUser[0]
+			}
 
 			// Собираем ID пройденных теорий и практик
 			const theoryIds = new Set(user.completedTheoryLessons.map(t => t.id))

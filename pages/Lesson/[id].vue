@@ -66,6 +66,7 @@
 	import presetHTML5 from "@bbob/preset-html5"
 
 	const { getRole, toggleComplete } = useAuth()
+    const config = useRuntimeConfig()
 
 	const route = useRoute()
 	const router = useRouter()
@@ -87,7 +88,7 @@
 		} catch (err) {
 			console.warn("Сервер недоступен, загружаем локальные уроки:", err)
 			try {
-				const localRes = await fetch(`/data/lessons.json`)
+				const localRes = await fetch(`${config.app.baseURL}data/lessons.json`)
 				if (!localRes.ok) throw new Error("Локальный файл не найден")
 
 				const allLessons = await localRes.json()
