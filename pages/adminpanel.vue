@@ -105,14 +105,57 @@
 		if (selectedGroup.value) params.append("groupId", selectedGroup.value)
 		if (selectedStatus.value) params.append("status", selectedStatus.value)
 
-		const res = await fetch(`http://localhost:8000/user?${params.toString()}`)
-		users.value = await res.json()
-		selectedUser.value = null
+		try {
+			let usersData, groupsData
+
+			if (isOffline.value) {
+				const [usersRes, groupsRes] = await Promise.all([fetch("/data/users.json"), fetch("/data/groups.json")])
+				usersData = await usersRes.json()
+				groupsData = await groupsRes.json()
+
+				const now = new Date()
+				const groupId = selectedGroup.value ? Number(selectedGroup.value) : null
+
+				const groupMap = new Map(groupsData.map(g => [g.id, g]))
+
+				users.value = usersData.filter(user => {
+					const isInGroup = groupId == null || (user.groups || []).includes(groupId)
+
+					const isActive = user.groups?.some(gid => {
+						const group = groupMap.get(gid)
+						if (!group || !group.endDate) return false
+						return new Date(group.endDate) > now
+					})
+
+					const statusMatch =
+						!selectedStatus.value ||
+						(selectedStatus.value === "active" && isActive) ||
+						(selectedStatus.value === "finished" && !isActive)
+					return isInGroup && statusMatch
+				})
+			} else {
+				const res = await fetch(`http://localhost:8000/user?${params.toString()}`)
+				users.value = await res.json()
+			}
+
+			selectedUser.value = null
+		} catch (e) {
+			console.error("Ошибка загрузки пользователей:", e)
+		}
 	}
 
 	const fetchGroups = async () => {
-		const res = await fetch("http://localhost:8000/group")
-		groups.value = await res.json()
+		try {
+			let res
+			if (isOffline.value) {
+				res = await fetch("/data/groups.json")
+			} else {
+				res = await fetch("http://localhost:8000/group")
+			}
+			groups.value = await res.json()
+		} catch (e) {
+			console.error("Ошибка загрузки групп:", e)
+		}
 	}
 
 	onMounted(() => {
