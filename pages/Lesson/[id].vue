@@ -66,7 +66,7 @@
 	import presetHTML5 from "@bbob/preset-html5"
 
 	const { getRole, toggleComplete } = useAuth()
-    const config = useRuntimeConfig()
+	const config = useRuntimeConfig()
 
 	const route = useRoute()
 	const router = useRouter()

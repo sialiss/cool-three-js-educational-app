@@ -56,7 +56,7 @@
 			<div class="modal-window stack gap-m">
 				<h3>Хотите узнать больше?</h3>
 				<p>Позвоните нам по номеру</p>
-                <p><strong>+7 (800) 123-45-67</strong></p>
+				<p><strong>+7 (800) 123-45-67</strong></p>
 				<p><strong>Время работы:</strong> Пн–Пт с 9:00 до 18:00</p>
 				<button class="btn-outline" @click="showModal = false">Закрыть</button>
 			</div>

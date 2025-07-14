@@ -23,12 +23,12 @@
 <script setup lang="ts">
 	import { useRouter, useRoute } from "vue-router"
 	import { onMounted } from "vue"
-    import { useAuth } from "@/composables/useAuth"
-    const { togglePracticeComplete, getRole } = useAuth()
+	import { useAuth } from "@/composables/useAuth"
+	const { togglePracticeComplete, getRole } = useAuth()
 
 	const props = defineProps<{
 		log: Record<string, number>
-        id: number
+		id: number
 	}>()
 
 	const emit = defineEmits(["close", "passed"])

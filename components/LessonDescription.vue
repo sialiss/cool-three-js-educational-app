@@ -7,7 +7,9 @@
 			<button v-if="lesson.theory" @click="goToLesson(lesson.theory.id)" class="primary">Открыть теорию</button>
 
 			<!-- Кнопка "Открыть практику", только если есть практика -->
-			<button v-if="lesson.practice" @click="goToPractice(lesson.practice.id)" class="secondary">Открыть практику</button>
+			<button v-if="lesson.practice" @click="goToPractice(lesson.practice.id)" class="secondary">
+				Открыть практику
+			</button>
 
 			<!-- Кнопка "Пройдено" только для пользователей -->
 			<button

@@ -3,7 +3,7 @@
 	import { useRouter } from "vue-router"
 
 	const { logout, isAuthenticated, isOffline, isServerOff, checkServerStatus, getRole } = useAuth()
-    checkServerStatus()
+	checkServerStatus()
 	const router = useRouter()
 
 	const handleLogout = async () => {
@@ -16,9 +16,13 @@
 	<div class="minimenu">
 		<div class="topstring">
 			<div>
-                <div v-if="!isAuthenticated && isServerOff">Сервер недоступен. Вы можете зайти как администратор введя любые данные.</div>
-                <div v-if="isAuthenticated && isServerOff && isOffline">Вы в режиме без доступа к серверу.</div>
-                <div v-if="isAuthenticated && !isServerOff && isOffline">Вы в режиме без доступа к серверу. Перезайдите, чтобы взаимодействовать с сервером.</div>
+				<div v-if="!isAuthenticated && isServerOff">
+					Сервер недоступен. Вы можете зайти как администратор введя любые данные.
+				</div>
+				<div v-if="isAuthenticated && isServerOff && isOffline">Вы в режиме без доступа к серверу.</div>
+				<div v-if="isAuthenticated && !isServerOff && isOffline">
+					Вы в режиме без доступа к серверу. Перезайдите, чтобы взаимодействовать с сервером.
+				</div>
 			</div>
 			<div class="account">
 				<NuxtLink v-if="!isAuthenticated" to="/login">Войти</NuxtLink>
@@ -47,10 +51,10 @@
 </template>
 
 <style>
-    .topstring {
-        display: flex;
-        justify-content: space-between;
-    }
+	.topstring {
+		display: flex;
+		justify-content: space-between;
+	}
 	.minimenu {
 		top: 0;
 		left: 0;
