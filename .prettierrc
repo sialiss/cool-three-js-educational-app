@@ -1,0 +1,19 @@
+{
+	"trailingComma": "es5",
+	"tabWidth": 4,
+	"useTabs": true,
+	"arrowParens": "avoid",
+	"semi": false,
+	"singleQuote": false,
+	"vueIndentScriptAndStyle": true,
+	"printWidth": 125,
+	"overrides": [
+		{
+			"files": ".css",
+			"options": {
+				"printWidth": 1500,
+				"multi-line": "false"
+			}
+		}
+	]
+}

@@ -1,0 +1,32 @@
+[
+	{
+		"id": 1,
+		"name": "Админ",
+		"surname": "Симуляторов",
+		"patronymic": "Иванович",
+		"login": "admin",
+		"password": "hashed_password_admin",
+		"email": "admin@example.com",
+		"phone": "+70000000000",
+		"role": "admin",
+		"groups": [],
+		"completedTheoryLessons": [],
+		"completedPracticeLessons": [],
+		"allowedLessons": []
+	},
+	{
+		"id": 2,
+		"name": "Пользователь",
+		"surname": "Симуляторов",
+		"patronymic": "Иванович",
+		"login": "user",
+		"password": "hashed_password_user",
+		"email": "user@example.com",
+		"phone": "+71000000000",
+		"role": "user",
+		"groups": [1],
+		"completedTheoryLessons": [],
+		"completedPracticeLessons": [],
+		"allowedLessons": []
+	}
+]
