@@ -5,10 +5,10 @@
 	"scripts": {
 		"build": "nuxt build",
 		"dev": "nuxt dev",
-		"generate": "nuxt generate --no-symlink",
+		"generate": "nuxt generate",
 		"preview": "nuxt preview",
 		"postinstall": "nuxt prepare",
-		"deploy": "nuxt generate --no-symlink && node ./gh-pages.js"
+		"deploy": "nuxt generate && node ./gh-pages.js"
 	},
 	"dependencies": {
 		"@bbob/html": "^4.2.0",

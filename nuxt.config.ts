@@ -8,4 +8,5 @@ export default defineNuxtConfig({
 	app: {
 		baseURL: import.meta.env.VITE_DEPLOY_ENV === "GH_PAGES" ? "/cool-three-js-educational-app/" : "/",
 	},
+	ssr: import.meta.env.VITE_DEPLOY_ENV !== "GH_PAGES",
 })

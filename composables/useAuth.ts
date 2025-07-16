@@ -6,9 +6,7 @@ export const useAuth = () => {
 	// тут можно задавать значение по умолчанию, но в гитхаб страничках
 	// оно даже не пытается его инициализировать, поэтому я задаю отдельно
 	const isAuthenticated = useState("auth")
-	console.log("tokenCookie", tokenCookie, Boolean(tokenCookie.value))
 	isAuthenticated.value = Boolean(tokenCookie.value)
-	console.log("isAuthenticated", isAuthenticated)
 	const roleCookie = useCookie("role")
 	const isServerOff = useState("server-off")
 	isServerOff.value = true
